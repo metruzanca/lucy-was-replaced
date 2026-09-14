@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net47</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <RootNamespace>GleamFarmer</RootNamespace>
+    <AssemblyName>GleamFarmer</AssemblyName>
+    <Description>Replace The Farmer Was Replaced's Python with Gleam</Description>
+    <Version>0.1.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+    </RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="2.*" />
+    <PackageReference Include="UnityEngine.Modules" Version="2021.3.5" IncludeAssets="compile" />
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/GleamRuntime/GleamRuntime.csproj" />
+  </ItemGroup>
+
+  <!-- TFWR assemblies (game install; must not be committed) -->
+  <ItemGroup>
+    <Reference Include="Core"><HintPath>../../libs/Core.dll</HintPath><Publicize>true</Publicize></Reference>
+    <Reference Include="Utils"><HintPath>../../libs/Utils.dll</HintPath><Publicize>true</Publicize></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>../../libs/Unity.TextMeshPro.dll</HintPath></Reference>
+  </ItemGroup>
+
+  <!-- Post-build: stage the plugin (DLLs + Embedded assets + native wasmtime) into the game's BepInEx/plugins dir -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/The Farmer Was Replaced</GameDir>
+    <PluginOut>$(GameDir)/BepInEx/plugins/GleamFarmer</PluginOut>
+  </PropertyGroup>
+
+  <Target Name="StagePlugin" AfterTargets="Build" Condition="Exists('$(GameDir)')">
+    <MakeDir Directories="$(PluginOut)/Embedded" />
+    <ItemGroup>
+      <PluginDlls Include="$(TargetDir)GleamFarmer.dll;$(TargetDir)GleamRuntime.dll;$(TargetDir)Jint.dll;$(TargetDir)Acornima.dll;$(TargetDir)Wasmtime.Dotnet.dll;$(TargetDir)IndexRange.dll" />
+      <EmbeddedFiles Include="../../src/Plugin/Embedded/**" />
+      <EmbeddedFiles Include="../../src/GleamRuntime/Embedded/**" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginDlls)" DestinationFolder="$(PluginOut)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(EmbeddedFiles)" DestinationFiles="$(PluginOut)/Embedded/%(RecursiveDir)%(Filename)%(Extension)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(PkgWasmtime)runtimes/win-x64/native/wasmtime.dll" DestinationFolder="$(PluginOut)" Condition="Exists('$(PkgWasmtime)runtimes/win-x64/native/wasmtime.dll')" />
+  </Target>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

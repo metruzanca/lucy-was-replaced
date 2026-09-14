@@ -40,15 +40,19 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] xunit suite (7 tests, all green): hello, stdlib, records, `use`, tfwr FFI, compile-error location, timeout
 - [x] Confirm full-language support: records/record-update, `use`, closures, pipelines all compile + run
 
-### M3 — In-game plugin (next)
-- [ ] Decompile current `Core.dll` with ilspycmd: map run/stop entry points + `CodeWindow` flow
-- [ ] Create `src/Plugin` BepInEx net47 project (publicize Core/Utils, reference game DLLs from `libs/`)
-- [ ] Harmony patch: intercept run entry → route `CodeWindow.codeText` to GleamRuntime
-- [ ] Route output/errors to game output area + `Plugin.Log`; wire stop
-- [ ] Gleam editor syntax coloring via `CodeUtilities.colors` patch
-- [ ] FarmerLib mod options: toggle Gleam mode, view compiled JS
-- [ ] Install BepInEx into game dir; test under Proton
-- [ ] Acceptance: a Gleam program typed in-game runs and prints to the game console
+### M3 — In-game plugin (in progress)
+- [x] Decompile current `Core.dll`/`Utils.dll` with ilspycmd → `docs/decompiled/` (gitignored)
+- [x] Create `src/Plugin` BepInEx net47 project (publicize Core/Utils, reference game DLLs from `libs/`)
+- [x] Harmony patch: `CodeWindow.PressExecuteOrStop` prefix → route `CodeInput.text` to GleamRuntime
+- [x] Route output/errors to `Plugin.Log`; compile errors surfaced via `CodeWindow.SetErrorMessage`
+- [x] Install BepInEx into game dir; Wine winhttp override (scripts/apply-proton-override.sh); tested under Proton ✅ plugin loads + run intercept works
+- [ ] Gleam editor syntax coloring via `CodeUtilities.SyntaxColor2` patch
+- [ ] FarmerLib mod options: toggle Gleam mode (config entry exists; UI option later)
+- [ ] Acceptance: a Gleam program typed in-game runs and prints (user to verify with `examples/hello.gleam`)
+
+Fast-iteration tooling added:
+- `scripts/run-gleam.sh <file.gleam>` — headless compile+run (same runtime as the plugin)
+- `scripts/push-to-game-save.sh <file.gleam> [save]` — hot-reload a snippet into the game's editor via the file watcher
 
 ### M4 — Farm API FFI (explicitly later)
 - [ ] Implement game verbs in JS host backed by publicized `Core.dll` (Farm/GridManager/inventory)

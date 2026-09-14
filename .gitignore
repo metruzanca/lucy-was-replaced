@@ -18,4 +18,4 @@ dist/
 result
 
 # Gleam
-build/
+build/docs/decompiled/

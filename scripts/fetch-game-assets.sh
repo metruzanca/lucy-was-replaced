@@ -35,7 +35,7 @@ for dll in Core Utils Assembly-CSharp NewAssembly mscorlib netstandard; do
   fi
 done
 # UnityEngine refs (only the ones the plugin needs to compile against)
-for dll in UnityEngine.CoreModule UnityEngine UnityEngine.UI UnityEngine.TextRenderingModule; do
+for dll in UnityEngine.CoreModule UnityEngine UnityEngine.UI UnityEngine.TextRenderingModule Unity.TextMeshPro UnityEngine.IMGUIModule UnityEngine.UIModule UnityEngine.InputLegacyModule UnityEngine.JSONSerializeModule; do
   if [[ -f "$managed_dir/$dll.dll" ]]; then
     cp "$managed_dir/$dll.dll" "$libs_dir/"
   fi

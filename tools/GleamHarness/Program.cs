@@ -1,11 +1,61 @@
 using GleamRuntime;
 
-var wasmPath = args.Length >= 1
+var wasmPath = args.Length >= 1 && args[0] != "--file"
     ? args[0]
-    : Path.GetFullPath("../../src/Plugin/Embedded/gleam_wasm_bg.wasm");
-var stdlibDir = args.Length >= 2
+    : Resolve("src/Plugin/Embedded/gleam_wasm_bg.wasm");
+var stdlibDir = args.Length >= 2 && args[0] != "--file"
     ? args[1]
-    : Path.GetFullPath("../../src/GleamRuntime/Embedded/gleam_stdlib");
+    : Resolve("src/GleamRuntime/Embedded/stdlib");
+
+static string Resolve(string repoRelative)
+    {
+        var candidates = new[] { repoRelative, "../../" + repoRelative };
+        return candidates.FirstOrDefault(p => File.Exists(p) || Directory.Exists(p))
+            ?? throw new FileNotFoundException($"cannot locate {repoRelative} from cwd {Environment.CurrentDirectory}");
+    }
+
+// `--file <path.gleam>`: compile + run one Gleam file and print its output (fast iteration).
+if (args is ["--file", var filePath])
+{
+    var file = Path.GetFullPath(filePath);
+    var source = File.ReadAllText(file);
+    var embeddedDir = Resolve("src/GleamRuntime/Embedded");
+    var runner = new GleamRunner(
+        File.ReadAllBytes(wasmPath),
+        GleamStdlib.LoadSources(stdlibDir),
+        RuntimeFiles(embeddedDir, stdlibDir),
+        TfwrModules(embeddedDir));
+    try
+    {
+        var compiled = runner.Compile(source);
+        var sink = new Sink();
+        var result = compiled.Run(sink, TimeSpan.FromSeconds(5));
+        if (result.Error != null)
+        {
+            Console.Error.WriteLine("RUNTIME ERROR: " + result.Error.Message);
+            return 1;
+        }
+        return 0;
+    }
+    catch (GleamCompileException ex)
+    {
+        Console.Error.WriteLine(ex.Message);
+        return 1;
+    }
+}
+
+static Dictionary<string, string> RuntimeFiles(string embeddedDir, string stdlibDir) => new()
+{
+    ["gleam"] = GleamStdlib.LoadPrelude(embeddedDir),
+    ["gleam_stdlib"] = GleamStdlib.LoadExternal(stdlibDir, "gleam_stdlib.mjs"),
+    ["dict"] = GleamStdlib.LoadExternal(stdlibDir, "dict.mjs"),
+    ["tfwr_ffi"] = File.ReadAllText(Path.Combine(embeddedDir, "tfwr", "tfwr_ffi.mjs")),
+};
+
+static List<(string, string)> TfwrModules(string embeddedDir) => new()
+{
+    ("tfwr", File.ReadAllText(Path.Combine(embeddedDir, "tfwr", "tfwr.gleam"))),
+};
 
 if (!File.Exists(wasmPath))
 {
@@ -195,6 +245,6 @@ return 0;
 
 sealed class Sink : IGleamLogSink
 {
-    public void Log(string message) => Console.WriteLine($"[wasm:log] {message}");
-    public void Error(string message) => Console.Error.WriteLine($"[wasm:error] {message}");
+    public void Log(string message) => Console.WriteLine(message);
+    public void Error(string message) => Console.Error.WriteLine(message);
 }

@@ -1,0 +1,23 @@
+public enum SoundEffectType
+{
+	HarvestGrass,
+	HarvestBush,
+	HarvestTree,
+	HarvestCarrot,
+	HarvestPumpkin,
+	HarvestSunflower,
+	HarvestCactus,
+	HarvestTreasureChest,
+	Plant,
+	Till,
+	PickUpItem,
+	UseWater,
+	UseFertilizer,
+	SwapPlants,
+	SpawnMaze,
+	DinosaurEatApple,
+	DinosaurDie,
+	Unlock,
+	ButtonHovered,
+	ButtonPressed
+}
