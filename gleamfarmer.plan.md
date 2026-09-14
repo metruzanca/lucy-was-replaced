@@ -58,7 +58,7 @@ Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); 
 - [x] `RealGameBridge`: main-thread dispatch (plugin `Update()` pump), `sim.farm.drones[0]` calls, op-cost pacing waits, `ResourceManager` SO lookups
 - [x] `PacedGleamRun`: worker thread + Jint engine, Run/Stop toggle (Run button stops active run), `StartExecutionMode`/`StopExecutionMode`, Jint CancellationToken for stop
 - [x] `io.println` pacing via print handler (PrintToAir + ~1 s)
-- [ ] In-game verification: walk-a-3x3-grid script (`examples/walk.gleam`) — drone animates, ~0.5 s/action, prints sequential, stop works
+- [x] In-game verification: movement paced ✅, planting works ✅ (lowercase objectName fix); sensors pending one run of `examples/verify.gleam`
 - [ ] Examples + docs
 
 Fast-iteration tooling:
