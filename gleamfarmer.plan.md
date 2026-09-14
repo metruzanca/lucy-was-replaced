@@ -14,10 +14,12 @@ the built-in Python subset, so the game can be used to teach a functional paradi
 Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 
 ### M0 — Environment & recon
-- [ ] Add Nix devshell (`flake.nix`/`shell.nix`): `dotnet-sdk`, `ilspycmd` (decompile)
-- [ ] `scripts/fetch-game-assets.sh`: copy `Core.dll`, `Utils.dll`, UnityEngine refs from game install into `libs/`
-- [ ] Decompile current `Core.dll` (`ProgLang/Execution.cs`, `Parser.cs`, `Tokenizer.cs`, `CodeWindow.cs`, `BuiltinFunctions.cs`)
-- [ ] Write `docs/game-internals.md`: exact run/stop entry points + game builtin surface
+- [x] Add Nix devshell (`shell.nix`): `dotnet-sdk`, `gleam`, `nodejs` (ilspycmd via dotnet tool)
+- [x] `scripts/fetch-game-assets.sh`: copy `Core.dll`, `Utils.dll`, UnityEngine refs from game install into `libs/`
+- [x] Download + pin `gleam-v1.18.1-browser.tar.gz` into `src/Plugin/Embedded/`
+- [x] Decode the WASM compiler ABI (`docs/wasm-compiler.md`): wasm-bindgen imports/exports, project_id, error/warning model
+- [x] Write `docs/game-internals.md`: interpreter layout, run/stop entry candidates, PyTypes, integration strategy
+- [ ] Decompile current `Core.dll` (`ProgLang/Execution.cs`, `Parser.cs`, `Tokenizer.cs`, `CodeWindow.cs`, `BuiltinFunctions.cs`) with ilspycmd
 - [ ] Initialize `GleamFarmer.sln` + `GleamRuntime.csproj` + `Plugin.csproj` (net47, publicize Core/Utils)
 
 ### M1 — WASM compiler spike (de-risk first)
