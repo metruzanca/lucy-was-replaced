@@ -105,7 +105,10 @@ namespace GleamFarmer
                 else
                 {
                     foreach (var line in sink.Output)
+                    {
                         Log.LogInfo("[gleam] " + line);
+                        PrintToAir(line);
+                    }
                     Log.LogInfo("GleamFarmer: run finished.");
                 }
 
@@ -120,6 +123,21 @@ namespace GleamFarmer
             {
                 ShowError(window, ex.Message);
                 return true;
+            }
+        }
+
+        /// <summary>Render a line like the game's own print(): a floating sign above the drone.</summary>
+        private static void PrintToAir(string text)
+        {
+            try
+            {
+                var sim = MainSim.Inst.sim;
+                if (sim?.farm?.drones is { Count: > 0 } drones)
+                    drones[0].PrintToAir(text);
+            }
+            catch (Exception)
+            {
+                // Output is already in the log; the drone may not be available yet.
             }
         }
 
