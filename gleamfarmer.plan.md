@@ -22,16 +22,16 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [ ] Decompile current `Core.dll` (`ProgLang/Execution.cs`, `Parser.cs`, `Tokenizer.cs`, `CodeWindow.cs`, `BuiltinFunctions.cs`) with ilspycmd
 - [ ] Initialize `GleamFarmer.sln` + `GleamRuntime.csproj` + `Plugin.csproj` (net47, publicize Core/Utils)
 
-### M1 — WASM compiler spike (de-risk first)
-- [ ] Download + pin `gleam-v1.18.1-browser.tar.gz` into `src/Plugin/Embedded/`
-- [ ] Headless console harness: load `gleam.wasm` via Wasmtime, implement emscripten import shim
-- [ ] Exercise `newProject` / `writeModule` / `compilePackage("javascript")` / `readCompiledJavaScript` / `takeWarnings`
-- [ ] Compile + run `io.println("Hello")` end-to-end in the harness
-- [ ] Fallback check: same spike under pure-managed `dotnet-webassembly` (if Wasmtime fails)
-- [ ] Record runtime decision in `docs/wasm-runtime.md`
+### M1 — WASM compiler spike (de-risk first)  ✅ COMPLETE
+- [x] Download + pin `gleam-v1.18.1-browser.tar.gz` into `src/Plugin/Embedded/`
+- [x] Headless console harness: load `gleam_wasm_bg.wasm` via Wasmtime, implement the wasm-bindgen host imports (the build is wasm-bindgen, not emscripten)
+- [x] Exercise `write_module` / `compile_package("javascript")` / `read_compiled_javascript` / `pop_warning`
+- [x] Compile + read `hello` and a two-module package end-to-end in the harness
+- [x] Fallback check: not needed — Wasmtime handles the externref ABI
+- [x] Record runtime decision in `docs/wasm-runtime.md`
 
 ### M2 — GleamRuntime library (headless)
-- [ ] WASM compiler wrapper (`GleamCompiler.cs`) with pinned compiler version
+- [x] WASM compiler wrapper (`GleamWasm.cs`, `GleamCompiler.cs`) with pinned compiler version
 - [ ] Bundle + write `gleam_stdlib` sources (pin matching version, e.g. 1.0.5) into the project
 - [ ] Read all compiled ESM modules into an in-memory module map
 - [ ] Jint host (`JsRuntime.cs`): ESM module loader, `io`/`console` capture, execution timeout
@@ -137,11 +137,14 @@ Discovered so far from `strings` on the installed build (Steam appid 2060160):
 Decompile step must confirm: which method reads `codeText` and starts execution, and the
 signatures of the game builtins for the M4 FFI.
 
-## M1 details — emscripten shim risk
+## M1 details — host ABI risk (resolved)
 
-The browser build is emscripten output; its `.wasm` imports `env` functions (memory/table,
-`fd_write`, etc.). M1 must implement these in the chosen runtime. This is the single
-biggest unknown and is isolated first.
+The browser build is **wasm-bindgen** (not emscripten), so there is no emscripten
+`env` shim. The risk was instead the externref ABI: `__wbg_new`/`__wbindgen_cast`
+return real `externref` values, while `compile_package` errors come back as indexes
+into the exported `__wbindgen_externrefs` table. M1 reimplemented the glue in C#
+(`GleamWasm.cs`) and confirmed the whole pipeline under Wasmtime — see
+`docs/wasm-runtime.md`.
 
 ## Risks & mitigations
 - **Emscripten WASM under .NET** — isolated in M1; managed-runtime fallback.

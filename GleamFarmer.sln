@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{BE2F359E-C28F-4402-9D51-0F62164BC8E8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GleamRuntime", "src\GleamRuntime\GleamRuntime.csproj", "{F59A430F-9F0C-421B-8687-88A7591687B6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{F31AD196-0AF5-4250-AC10-43B075E17758}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GleamHarness", "tools\GleamHarness\GleamHarness.csproj", "{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F59A430F-9F0C-421B-8687-88A7591687B6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F59A430F-9F0C-421B-8687-88A7591687B6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F59A430F-9F0C-421B-8687-88A7591687B6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F59A430F-9F0C-421B-8687-88A7591687B6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F59A430F-9F0C-421B-8687-88A7591687B6} = {BE2F359E-C28F-4402-9D51-0F62164BC8E8}
+		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D} = {F31AD196-0AF5-4250-AC10-43B075E17758}
+	EndGlobalSection
+EndGlobal
