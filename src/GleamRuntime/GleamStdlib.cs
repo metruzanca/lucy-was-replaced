@@ -33,6 +33,25 @@ namespace GleamRuntime
         public static string LoadExternal(string directory, string fileName) =>
             File.ReadAllText(Path.Combine(directory, fileName));
 
+        /// <summary>
+        /// Load the `game` modules from the embedded dir: `game.gleam` → "game"
+        /// and `game/*.gleam` → "game/*".
+        /// </summary>
+        public static List<(string Name, string Code)> LoadGameModules(string embeddedDir)
+        {
+            var modules = new List<(string Name, string Code)>();
+            foreach (var path in Directory.EnumerateFiles(embeddedDir, "*.gleam", SearchOption.AllDirectories))
+            {
+                var relative = path.Substring(embeddedDir.Length).TrimStart('/', '\\');
+                if (!relative.StartsWith("game")) continue;
+
+                var name = relative.Substring(0, relative.Length - ".gleam".Length).Replace('\\', '/');
+                modules.Add((name, File.ReadAllText(path)));
+            }
+            modules.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.Ordinal));
+            return modules;
+        }
+
         /// <summary>Read the JS runtime prelude ("prelude.mjs").</summary>
         public static string LoadPrelude(string directory) =>
             File.ReadAllText(Path.Combine(directory, "prelude.mjs"));

@@ -21,7 +21,8 @@ namespace GleamRuntime
         public JsRuntime(
             IReadOnlyDictionary<string, string> moduleSources,
             IGleamLogSink? sink = null,
-            TimeSpan? timeout = null)
+            TimeSpan? timeout = null,
+            IGameBridge? bridge = null)
         {
             var loader = new GleamModuleLoader(moduleSources);
             _engine = new Engine(options =>
@@ -31,6 +32,7 @@ namespace GleamRuntime
                 options.LimitRecursion(4096);
             });
             _engine.SetValue("console", new ConsoleBridge(sink));
+            _engine.SetValue("__gleam_host", bridge ?? (object)new StubGameBridge());
         }
 
         /// <summary>Execute the package: import the entry wrapper, which calls main().</summary>

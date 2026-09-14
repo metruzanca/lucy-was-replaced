@@ -47,9 +47,8 @@ namespace GleamFarmer
                 var embedded = Path.Combine(dir, "Embedded");
                 var wasmPath = Path.Combine(embedded, "gleam_wasm_bg.wasm");
                 var stdlibDir = Path.Combine(embedded, "stdlib");
-                var tfwrDir = Path.Combine(embedded, "tfwr");
 
-                foreach (var required in new[] { wasmPath, stdlibDir, tfwrDir })
+                foreach (var required in new[] { wasmPath, stdlibDir })
                 {
                     if (!Directory.Exists(required) && !File.Exists(required))
                     {
@@ -65,12 +64,9 @@ namespace GleamFarmer
                     ["gleam"] = GleamStdlib.LoadPrelude(embedded),
                     ["gleam_stdlib"] = GleamStdlib.LoadExternal(stdlibDir, "gleam_stdlib.mjs"),
                     ["dict"] = GleamStdlib.LoadExternal(stdlibDir, "dict.mjs"),
-                    ["tfwr_ffi"] = File.ReadAllText(Path.Combine(tfwrDir, "tfwr_ffi.mjs")),
+                    ["game_ffi"] = File.ReadAllText(Path.Combine(embedded, "game_ffi.mjs")),
                 };
-                var extraModules = new List<(string, string)>
-                {
-                    ("tfwr", File.ReadAllText(Path.Combine(tfwrDir, "tfwr.gleam"))),
-                };
+                var extraModules = GleamStdlib.LoadGameModules(embedded);
 
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);

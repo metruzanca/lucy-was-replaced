@@ -21,7 +21,7 @@ namespace GleamFarmer.Patches
             fields.Field("parseException").SetValue(null);
             fields.Field("errorString").SetValue(null);
             fields.Field("cachedProgram").SetValue(null);
-            __result = null;
+            __result = null!;
 
             // Dismiss any stale Python error panel.
             __instance.CloseError();

@@ -22,23 +22,22 @@ namespace GleamRuntime.Tests
             var stdlibDir = Path.Combine(embedded, "stdlib");
 
             Stdlib = GleamStdlib.LoadSources(stdlibDir);
+            GameModules = GleamStdlib.LoadGameModules(embedded);
             RuntimeFiles = new Dictionary<string, string>
             {
                 ["gleam"] = GleamStdlib.LoadPrelude(embedded),
                 ["gleam_stdlib"] = GleamStdlib.LoadExternal(stdlibDir, "gleam_stdlib.mjs"),
                 ["dict"] = GleamStdlib.LoadExternal(stdlibDir, "dict.mjs"),
-                ["tfwr_ffi"] = File.ReadAllText(Path.Combine(embedded, "tfwr", "tfwr_ffi.mjs")),
+                ["game_ffi"] = File.ReadAllText(Path.Combine(embedded, "game_ffi.mjs")),
             };
-            ExtraModules = new List<(string, string)>
-            {
-                ("tfwr", File.ReadAllText(Path.Combine(embedded, "tfwr", "tfwr.gleam"))),
-            };
+            ExtraModules = new List<(string, string)>(GameModules);
 
             Runner = new GleamRunner(WasmBytes, Stdlib, RuntimeFiles, ExtraModules);
         }
 
         public byte[] WasmBytes { get; }
         public IReadOnlyList<(string Name, string Code)> Stdlib { get; }
+        public IReadOnlyList<(string Name, string Code)> GameModules { get; }
         public IReadOnlyList<(string Name, string Code)> ExtraModules { get; }
         public IReadOnlyDictionary<string, string> RuntimeFiles { get; }
         public GleamRunner Runner { get; }

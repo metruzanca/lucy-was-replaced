@@ -24,7 +24,7 @@ if (args is ["--file", var filePath])
         File.ReadAllBytes(wasmPath),
         GleamStdlib.LoadSources(stdlibDir),
         RuntimeFiles(embeddedDir, stdlibDir),
-        TfwrModules(embeddedDir));
+        GameModules(embeddedDir));
     try
     {
         var compiled = runner.Compile(source);
@@ -49,13 +49,11 @@ static Dictionary<string, string> RuntimeFiles(string embeddedDir, string stdlib
     ["gleam"] = GleamStdlib.LoadPrelude(embeddedDir),
     ["gleam_stdlib"] = GleamStdlib.LoadExternal(stdlibDir, "gleam_stdlib.mjs"),
     ["dict"] = GleamStdlib.LoadExternal(stdlibDir, "dict.mjs"),
-    ["tfwr_ffi"] = File.ReadAllText(Path.Combine(embeddedDir, "tfwr", "tfwr_ffi.mjs")),
+    ["game_ffi"] = File.ReadAllText(Path.Combine(embeddedDir, "game_ffi.mjs")),
 };
 
-static List<(string, string)> TfwrModules(string embeddedDir) => new()
-{
-    ("tfwr", File.ReadAllText(Path.Combine(embeddedDir, "tfwr", "tfwr.gleam"))),
-};
+static List<(string, string)> GameModules(string embeddedDir) =>
+    GleamStdlib.LoadGameModules(embeddedDir);
 
 if (!File.Exists(wasmPath))
 {

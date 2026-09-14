@@ -83,25 +83,40 @@ namespace GleamRuntime.Tests
         }
 
         [Fact]
-        public void TfwrFfiStubRoutesToConsole()
+        public void GameModuleRoutesToBridge()
         {
             var compiled = _fixture.Runner.Compile("""
                 import gleam/io
                 import gleam/int
-                import tfwr
+                import gleam/option.{Some}
+                import game
+                import game/item
 
                 pub fn main() {
-                  tfwr.harvest()
-                  tfwr.move(tfwr.east)
-                  io.println("pos: " <> int.to_string(tfwr.get_pos_x()))
+                  game.move(game.North)
+                  game.plant(game.Grass)
+                  game.till()
+                  io.println(int.to_string(game.get_pos_x()))
+                  case game.get_entity_type() {
+                    Some(game.Grass) -> io.println("grass")
+                    _ -> io.println("other")
+                  }
+                  item.num_items(item.Hay)
                 }
                 """);
+
+            var bridge = new StubGameBridge();
             var sink = new CapturingSink();
-            var result = compiled.Run(sink);
+            var result = compiled.Run(sink, null, bridge);
+
             Assert.True(result.IsOk, result.Error?.ToString());
-            Assert.Contains("[tfwr] harvest()", sink.Output);
-            Assert.Contains("[tfwr] move(1)", sink.Output);
-            Assert.Contains("pos: 0", sink.Output);
+            Assert.Contains("move(0)", bridge.Calls);       // North
+            Assert.Contains("plant(1)", bridge.Calls);      // Grass
+            Assert.Contains("till()", bridge.Calls);
+            Assert.Contains("get_pos_x()", bridge.Calls);
+            Assert.Contains("get_entity_type()", bridge.Calls);
+            Assert.Contains("num_items(1)", bridge.Calls);  // Hay
+            Assert.Contains("grass", sink.Output);          // stub returns entity code 1 -> Some(Grass)
         }
 
         [Fact]
