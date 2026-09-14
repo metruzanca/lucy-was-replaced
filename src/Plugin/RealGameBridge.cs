@@ -14,11 +14,12 @@ namespace GleamFarmer
     /// </summary>
     public sealed class RealGameBridge : IGameBridge, IGleamPrintHandler
     {
+        // Game objectName/itemName values are lowercase (e.g. "carrot", "soil", "bone").
         private static readonly string[] EntityNames =
-            { "", "Grass", "Bush", "Carrot", "Pumpkin", "Sunflower", "Tree", "Cactus", "Treasure", "Hedge" };
+            { "", "grass", "bush", "carrot", "pumpkin", "sunflower", "tree", "cactus", "treasure", "hedge" };
 
         private static readonly string[] ItemNames =
-            { "", "Hay", "Wood", "Carrot", "Pumpkin", "Power", "Gold", "Bones", "Water", "Fertilizer" };
+            { "", "hay", "wood", "carrot", "pumpkin", "power", "gold", "bone", "water", "fertilizer" };
 
         private readonly MainThreadDispatcher _dispatcher;
         private readonly IGleamRunController _run;
@@ -114,7 +115,7 @@ namespace GleamFarmer
             var name = item >= 0 && item < ItemNames.Length ? ItemNames[item] : string.Empty;
             var ok = OnMain((sim, drone) =>
             {
-                if (name != "Water") return false; // v1: only watering
+                if (name != "water") return false; // v1: only watering
                 return drone.Water(1);
             });
             WaitOps(ok ? 200.0 : 1.0);
@@ -135,7 +136,7 @@ namespace GleamFarmer
         });
 
         public int get_ground_type_code() => OnMain((sim, drone) =>
-            drone.GroundUnderDrone()?.objectSO?.objectName == "Soil" ? 1 : 2);
+            drone.GroundUnderDrone()?.objectSO?.objectName == "soil" ? 1 : 2);
 
         public double get_water() => OnMain((sim, drone) => drone.GetWater());
 
