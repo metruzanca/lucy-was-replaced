@@ -1,0 +1,21 @@
+# Game assets (never commit - copyright)
+libs/
+
+# Build output
+bin/
+obj/
+dist/
+*.dll
+*.pdb
+
+# IDE / OS
+.vs/
+.idea/
+*.user
+.DS_Store
+
+# Nix
+result
+
+# Gleam
+build/
