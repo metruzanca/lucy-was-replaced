@@ -55,10 +55,10 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); custom Gleam types for constants; v1 scope = movement + farming + sensors.
 - [x] Rename `tfwr` → `game`: `game.gleam` (custom types Direction/Entity/Ground + pattern-match→code) + `game/item.gleam` (Item), `game_ffi.mjs` primitive host bridge, `StubGameBridge`, tests green (7/7)
 - [x] `IGameBridge` + `StubGameBridge` wired into `JsRuntime` as `__gleam_host` (default stub; plugin passes real bridge later) — methods named to match JS (Jint is case-insensitive but no underscore stripping)
-- [ ] `RealGameBridge`: main-thread dispatch (plugin `Update()` pump), `sim.farm.drones[0]` calls, op-cost pacing waits, `ResourceManager` SO lookups
-- [ ] `PacedGleamRun`: worker thread + Jint engine, Run/Stop toggle (Run button stops active run), `StartExecutionMode`/`StopExecutionMode`
-- [ ] `io.println` pacing via console bridge → print action (~1 s)
-- [ ] In-game verification: walk-a-3x3-grid script (move/plant/till/print positions), stop works
+- [x] `RealGameBridge`: main-thread dispatch (plugin `Update()` pump), `sim.farm.drones[0]` calls, op-cost pacing waits, `ResourceManager` SO lookups
+- [x] `PacedGleamRun`: worker thread + Jint engine, Run/Stop toggle (Run button stops active run), `StartExecutionMode`/`StopExecutionMode`, Jint CancellationToken for stop
+- [x] `io.println` pacing via print handler (PrintToAir + ~1 s)
+- [ ] In-game verification: walk-a-3x3-grid script (`examples/walk.gleam`) — drone animates, ~0.5 s/action, prints sequential, stop works
 - [ ] Examples + docs
 
 Fast-iteration tooling:
