@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Runtime.Modules;
@@ -22,7 +23,9 @@ namespace GleamRuntime
             IReadOnlyDictionary<string, string> moduleSources,
             IGleamLogSink? sink = null,
             TimeSpan? timeout = null,
-            IGameBridge? bridge = null)
+            IGameBridge? bridge = null,
+            IGleamPrintHandler? print = null,
+            CancellationToken cancellationToken = default)
         {
             var loader = new GleamModuleLoader(moduleSources);
             _engine = new Engine(options =>
@@ -30,8 +33,9 @@ namespace GleamRuntime
                 options.Modules.ModuleLoader = loader;
                 options.TimeoutInterval(timeout ?? TimeSpan.FromSeconds(5));
                 options.LimitRecursion(4096);
+                options.CancellationToken(cancellationToken);
             });
-            _engine.SetValue("console", new ConsoleBridge(sink));
+            _engine.SetValue("console", new ConsoleBridge(sink, print));
             _engine.SetValue("__gleam_host", bridge ?? (object)new StubGameBridge());
         }
 
@@ -43,10 +47,21 @@ namespace GleamRuntime
         private sealed class ConsoleBridge
         {
             private readonly IGleamLogSink? _sink;
+            private readonly IGleamPrintHandler? _print;
 
-            public ConsoleBridge(IGleamLogSink? sink) => _sink = sink;
+            public ConsoleBridge(IGleamLogSink? sink, IGleamPrintHandler? print)
+            {
+                _sink = sink;
+                _print = print;
+            }
 
-            public void log(object? value) => _sink?.Log(Convert(value));
+            public void log(object? value)
+            {
+                var message = Convert(value);
+                if (_print != null) _print.Print(message);
+                else _sink?.Log(message);
+            }
+
             public void error(object? value) => _sink?.Error(Convert(value));
 
             private static string Convert(object? value) => value switch

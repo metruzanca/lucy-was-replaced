@@ -88,6 +88,9 @@ namespace GleamRuntime
 
         internal CompiledGleam(IReadOnlyDictionary<string, string> sources) => _sources = sources;
 
+        /// <summary>The compiled ESM module map (for running on a custom host).</summary>
+        public IReadOnlyDictionary<string, string> Sources => _sources;
+
         /// <summary>Execute the package (imports the entry wrapper, which calls main()).</summary>
         public GleamRunResult Run(IGleamLogSink? sink = null, TimeSpan? timeout = null, IGameBridge? bridge = null)
         {

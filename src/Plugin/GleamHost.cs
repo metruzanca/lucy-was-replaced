@@ -12,7 +12,8 @@ namespace GleamFarmer
 {
     /// <summary>
     /// Owns the Gleam runtime for the plugin: loads the embedded wasm compiler +
-    /// stdlib, compiles the editor's text, runs it, and surfaces output/errors.
+    /// stdlib, compiles the editor's text, and runs it paced on a worker thread.
+    /// The Run/Execute button toggles: press once to start, again to stop.
     /// </summary>
     public sealed class GleamHost
     {
@@ -22,6 +23,9 @@ namespace GleamFarmer
 
         private readonly GleamRunner _runner;
         private readonly ConfigEntry<bool> _enabled;
+        private readonly MainThreadDispatcher _dispatcher = new();
+        private readonly object _runLock = new();
+        private PacedGleamRun? _activeRun;
 
         private GleamHost(GleamRunner runner, ConfigEntry<bool> enabled)
         {
@@ -30,6 +34,9 @@ namespace GleamFarmer
         }
 
         public bool Enabled => _enabled.Value;
+
+        /// <summary>Pump main-thread actions queued by the Gleam worker. Called from Update().</summary>
+        public void PumpDispatcher() => _dispatcher.Pump();
 
         public static void Init(ManualLogSource log, ConfigEntry<bool> enabled)
         {
@@ -78,9 +85,21 @@ namespace GleamFarmer
             }
         }
 
-        /// <summary>Compile and run the code in the given window. Returns true if handled.</summary>
+        /// <summary>Run/stop the code in the given window. Returns true if handled.</summary>
         public bool Run(CodeWindow window)
         {
+            lock (_runLock)
+            {
+                if (_activeRun != null)
+                {
+                    Log.LogInfo("GleamFarmer: stopping run…");
+                    _activeRun.Dispose();
+                    _activeRun = null;
+                    window.StopExecutionMode();
+                    return true;
+                }
+            }
+
             try
             {
                 var source = GetCodeText(window);
@@ -90,24 +109,19 @@ namespace GleamFarmer
                 Log.LogInfo("GleamFarmer: compiling…");
                 var compiled = _runner.Compile(source);
 
-                var sink = new CollectingSink();
-                var result = compiled.Run(sink, TimeSpan.FromSeconds(5));
+                var sink = new PluginSink(Log);
+                var run = new PacedGleamRun(compiled, _dispatcher, sink);
+                run.Completed += () => OnRunFinished(window, sink, error: null);
+                run.Failed += error => OnRunFinished(window, sink, error);
 
-                if (result.Error != null)
+                lock (_runLock)
                 {
-                    Log.LogError($"GleamFarmer: runtime error: {result.Error.Message}");
-                    ShowError(window, result.Error.Message);
-                }
-                else
-                {
-                    foreach (var line in sink.Output)
-                    {
-                        Log.LogInfo("[gleam] " + line);
-                        PrintToAir(line);
-                    }
-                    Log.LogInfo("GleamFarmer: run finished.");
+                    _activeRun = run;
                 }
 
+                window.StartExecutionMode();
+                run.Start();
+                Log.LogInfo("GleamFarmer: run started.");
                 return true;
             }
             catch (GleamCompileException ex)
@@ -122,18 +136,30 @@ namespace GleamFarmer
             }
         }
 
-        /// <summary>Render a line like the game's own print(): a floating sign above the drone.</summary>
-        private static void PrintToAir(string text)
+        private void OnRunFinished(CodeWindow window, PluginSink sink, Exception? error)
         {
-            try
+            lock (_runLock)
             {
-                var sim = MainSim.Inst.sim;
-                if (sim?.farm?.drones is { Count: > 0 } drones)
-                    drones[0].PrintToAir(text);
+                _activeRun = null;
             }
-            catch (Exception)
+
+            if (error != null)
             {
-                // Output is already in the log; the drone may not be available yet.
+                Log.LogError($"GleamFarmer: runtime error: {error.Message}");
+                _dispatcher.Invoke(() =>
+                {
+                    ShowError(window, error.Message);
+                    return true;
+                });
+            }
+            else
+            {
+                Log.LogInfo($"GleamFarmer: run finished. Output: {sink.Output.Count} lines");
+                _dispatcher.Invoke(() =>
+                {
+                    window.StopExecutionMode();
+                    return true;
+                });
             }
         }
 
@@ -145,8 +171,9 @@ namespace GleamFarmer
             if (match.Success && int.TryParse(match.Groups[1].Value, out var line) &&
                 int.TryParse(match.Groups[2].Value, out var column))
             {
-                var offset = LineColumnToOffset(GetCodeText(window), line, column);
-                window.SetErrorMessage(message, offset, Math.Min(offset + 1, GetCodeText(window).Length));
+                var text = GetCodeText(window);
+                var offset = LineColumnToOffset(text, line, column);
+                window.SetErrorMessage(message, offset, Math.Min(offset + 1, text.Length));
             }
             else
             {
@@ -175,12 +202,25 @@ namespace GleamFarmer
         }
     }
 
-    /// <summary>Collects console output from a Gleam run.</summary>
-    internal sealed class CollectingSink : IGleamLogSink
+    /// <summary>Collects console output and mirrors it to the BepInEx log.</summary>
+    internal sealed class PluginSink : IGleamLogSink
     {
+        private readonly ManualLogSource _log;
+
+        public PluginSink(ManualLogSource log) => _log = log;
+
         public List<string> Output { get; } = new();
 
-        public void Log(string message) => Output.Add(message);
-        public void Error(string message) => Output.Add(message);
+        public void Log(string message)
+        {
+            Output.Add(message);
+            _log.LogInfo("[gleam] " + message);
+        }
+
+        public void Error(string message)
+        {
+            Output.Add(message);
+            _log.LogError("[gleam] " + message);
+        }
     }
 }

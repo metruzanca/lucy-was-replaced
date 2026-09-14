@@ -27,5 +27,11 @@ namespace GleamFarmer
 
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_NAME} {MyPluginInfo.PLUGIN_VERSION} loaded.");
         }
+
+        /// <summary>Run on the Unity main thread each frame: drains game actions queued by the Gleam worker.</summary>
+        private void Update()
+        {
+            GleamHost.Instance?.PumpDispatcher();
+        }
     }
 }
