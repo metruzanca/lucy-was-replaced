@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/GleamRuntime/GleamRuntime.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../src/Plugin/Embedded/gleam_wasm_bg.wasm" Link="Embedded/gleam_wasm_bg.wasm" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../src/GleamRuntime/Embedded/**" Link="Embedded/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

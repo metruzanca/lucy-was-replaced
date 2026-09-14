@@ -30,17 +30,19 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] Fallback check: not needed — Wasmtime handles the externref ABI
 - [x] Record runtime decision in `docs/wasm-runtime.md`
 
-### M2 — GleamRuntime library (headless)
+### M2 — GleamRuntime library (headless)  ✅ COMPLETE
 - [x] WASM compiler wrapper (`GleamWasm.cs`, `GleamCompiler.cs`) with pinned compiler version
-- [ ] Bundle + write `gleam_stdlib` sources (pin matching version, e.g. 1.0.5) into the project
-- [ ] Read all compiled ESM modules into an in-memory module map
-- [ ] Jint host (`JsRuntime.cs`): ESM module loader, `io`/`console` capture, execution timeout
-- [ ] Gleam error mapping (`src/main.gleam:N` → editor line)
-- [ ] `tfwr` FFI stub module (typed `@external` functions; initially log-only)
-- [ ] xunit suite: recursion, `case`, stdlib `list`/`string`, error cases
-- [ ] Confirm full-language support (records, `use`, imports) compiles + runs
+- [x] Bundle + write `gleam_stdlib` 1.0.5 sources + JS externals + prelude into the project (`Embedded/`, fetched by `scripts/fetch-stdlib.sh`)
+- [x] Read all compiled ESM modules into an in-memory module map
+- [x] Jint host (`JsRuntime.cs`): ESM module loader (custom `IModuleLoader` resolving `./x.mjs`/`../x.mjs`), `io`/`console` capture, execution timeout + recursion limit
+- [x] Gleam error mapping: compile errors carry `src/main.gleam:N:C` diagnostics
+- [x] `tfwr` FFI stub module (typed `@external` functions + `tfwr_ffi.mjs` stub routing to console)
+- [x] xunit suite (7 tests, all green): hello, stdlib, records, `use`, tfwr FFI, compile-error location, timeout
+- [x] Confirm full-language support: records/record-update, `use`, closures, pipelines all compile + run
 
-### M3 — In-game plugin
+### M3 — In-game plugin (next)
+- [ ] Decompile current `Core.dll` with ilspycmd: map run/stop entry points + `CodeWindow` flow
+- [ ] Create `src/Plugin` BepInEx net47 project (publicize Core/Utils, reference game DLLs from `libs/`)
 - [ ] Harmony patch: intercept run entry → route `CodeWindow.codeText` to GleamRuntime
 - [ ] Route output/errors to game output area + `Plugin.Log`; wire stop
 - [ ] Gleam editor syntax coloring via `CodeUtilities.colors` patch

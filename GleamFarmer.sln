@@ -11,6 +11,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{F31AD196
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GleamHarness", "tools\GleamHarness\GleamHarness.csproj", "{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{222C149D-C28A-4C25-B3B1-C83021BC3CB2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GleamRuntime.Tests", "tests\GleamRuntime.Tests\GleamRuntime.Tests.csproj", "{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,9 +32,14 @@ Global
 		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{F59A430F-9F0C-421B-8687-88A7591687B6} = {BE2F359E-C28F-4402-9D51-0F62164BC8E8}
 		{A1DC0D59-FD77-487F-BF3F-4951BAB1055D} = {F31AD196-0AF5-4250-AC10-43B075E17758}
+		{FB4B8A06-C7DC-47D5-AD7D-523D0F375C9E} = {222C149D-C28A-4C25-B3B1-C83021BC3CB2}
 	EndGlobalSection
 EndGlobal
