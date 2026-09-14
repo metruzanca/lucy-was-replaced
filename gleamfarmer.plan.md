@@ -40,17 +40,18 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [x] xunit suite (7 tests, all green): hello, stdlib, records, `use`, tfwr FFI, compile-error location, timeout
 - [x] Confirm full-language support: records/record-update, `use`, closures, pipelines all compile + run
 
-### M3 — In-game plugin (in progress)
+### M3 — In-game plugin ✅ CORE DONE
 - [x] Decompile current `Core.dll`/`Utils.dll` with ilspycmd → `docs/decompiled/` (gitignored)
 - [x] Create `src/Plugin` BepInEx net47 project (publicize Core/Utils, reference game DLLs from `libs/`)
 - [x] Harmony patch: `CodeWindow.PressExecuteOrStop` prefix → route `CodeInput.text` to GleamRuntime
+- [x] Harmony patch: `CodeWindow.Parse` skipped in Gleam mode (fixes bogus Python "invalid file import" errors)
 - [x] Route output/errors to `Plugin.Log`; compile errors surfaced via `CodeWindow.SetErrorMessage`
-- [x] Install BepInEx into game dir; Wine winhttp override (scripts/apply-proton-override.sh); tested under Proton ✅ plugin loads + run intercept works
-- [ ] Gleam editor syntax coloring via `CodeUtilities.SyntaxColor2` patch
+- [x] Install BepInEx into game dir; Wine winhttp override (scripts/apply-proton-override.sh); tested under Proton ✅
+- [x] Gleam editor syntax coloring: `CodeUtilities.SyntaxColor2` prefix → `GleamHighlighter` (keywords/functions/types/numbers/strings/comments)
 - [ ] FarmerLib mod options: toggle Gleam mode (config entry exists; UI option later)
-- [ ] Acceptance: a Gleam program typed in-game runs and prints (user to verify with `examples/hello.gleam`)
+- [x] Acceptance: Gleam program typed in-game runs and prints ✅ (examples/hello.gleam → hello/total/strings in game log)
 
-Fast-iteration tooling added:
+Fast-iteration tooling:
 - `scripts/run-gleam.sh <file.gleam>` — headless compile+run (same runtime as the plugin)
 - `scripts/push-to-game-save.sh <file.gleam> [save]` — hot-reload a snippet into the game's editor via the file watcher
 
