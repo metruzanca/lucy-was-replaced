@@ -59,7 +59,7 @@ Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); 
 - [x] `PacedGleamRun`: worker thread + Jint engine, Run/Stop toggle (Run button stops active run), `StartExecutionMode`/`StopExecutionMode`, Jint CancellationToken for stop
 - [x] `io.println` pacing via print handler (PrintToAir + ~1 s)
 - [x] In-game verification: movement paced ✅, planting works ✅ (lowercase objectName fix); sensors pending one run of `examples/verify.gleam`
-- [ ] Examples + docs
+- [x] Examples (`hello`, `farm`, `walk`, `verify`) + README + docs
 
 Fast-iteration tooling:
 - `scripts/run-gleam.sh <file.gleam>` — headless compile+run (same runtime as the plugin)
