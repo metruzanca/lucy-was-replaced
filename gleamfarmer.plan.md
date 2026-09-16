@@ -51,14 +51,14 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [ ] FarmerLib mod options: toggle Gleam mode (config entry exists; UI option later)
 - [x] Acceptance: Gleam program typed in-game runs and prints ✅ (examples/hello.gleam → hello/total/strings in game log)
 
-### M4 — `game` FFI (paced farm API) — IN PROGRESS
+### M4 — `game` FFI (paced farm API) ✅ COMPLETE (v1: movement + farming + sensors)
 Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); custom Gleam types for constants; v1 scope = movement + farming + sensors.
 - [x] Rename `tfwr` → `game`: `game.gleam` (custom types Direction/Entity/Ground + pattern-match→code) + `game/item.gleam` (Item), `game_ffi.mjs` primitive host bridge, `StubGameBridge`, tests green (7/7)
 - [x] `IGameBridge` + `StubGameBridge` wired into `JsRuntime` as `__gleam_host` (default stub; plugin passes real bridge later) — methods named to match JS (Jint is case-insensitive but no underscore stripping)
 - [x] `RealGameBridge`: main-thread dispatch (plugin `Update()` pump), `sim.farm.drones[0]` calls, op-cost pacing waits, `ResourceManager` SO lookups
 - [x] `PacedGleamRun`: worker thread + Jint engine, Run/Stop toggle (Run button stops active run), `StartExecutionMode`/`StopExecutionMode`, Jint CancellationToken for stop
 - [x] `io.println` pacing via print handler (PrintToAir + ~1 s)
-- [x] In-game verification: movement paced ✅, planting works ✅ (lowercase objectName fix); sensors pending one run of `examples/verify.gleam`
+- [x] In-game verification ✅: movement paced, planting works, sensors correct (`ground: soil`, `entity: Carrot OK`, `carrots: 3104334863`); fixed int32 overflow + ResourceManager lazy-load race
 - [x] Examples (`hello`, `farm`, `walk`, `verify`) + README + docs
 
 Fast-iteration tooling:
