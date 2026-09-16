@@ -70,10 +70,11 @@ Fast-iteration tooling:
 - [ ] Value marshalling across Jint↔CLR
 - [ ] Smoke test: automate a real farm task from Gleam
 
-### M5 — Packaging & teaching docs
-- [ ] BepInEx plugin zip (DLL + embedded wasm/stdlib + Wasmtime/Jint deps)
-- [ ] README + install instructions
-- [ ] Functional-paradigm sample scripts (pure fns, state threading, `map`/`fold`, pipelines, `case`)
+### M5 — Packaging & distribution ✅ COMPLETE
+- [x] `scripts/package.sh` → `dist/GleamFarmer-<version>.zip` (12 DLLs incl. native wasmtime, embedded wasm/stdlib/game, docs; no game assemblies)
+- [x] `docs/INSTALL.md` (Windows + Linux/Proton incl. winhttp override) + `THIRD_PARTY_NOTICES.md`
+- [x] Validated: clean packaged install (minimal DLL set) loads and runs in-game ✅
+- [ ] Teaching content (functional-paradigm samples + guide) — separate future item
 
 ---
 
