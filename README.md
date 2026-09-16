@@ -56,6 +56,8 @@ Iteration:
 ./scripts/copy-save-progression.sh Save0 Gleam    # grant a save another save's unlocks/items
 ```
 
+Releasing a new version: see [docs/RELEASE.md](docs/RELEASE.md).
+
 ## In-game setup (Linux/Proton)
 
 1. Install BepInEx 5 (win_x64) into the game directory.
