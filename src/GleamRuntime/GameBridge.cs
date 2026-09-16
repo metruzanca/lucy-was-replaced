@@ -27,10 +27,10 @@ namespace GleamRuntime
         int get_entity_type_code();
         int get_ground_type_code();
         double get_water();
-        int num_items(int item);
+        long num_items(int item);
         bool use_item(int item);
         double get_time();
-        int get_tick_count();
+        long get_tick_count();
     }
 
     /// <summary>Headless bridge for the CLI and tests: records every call, returns canned values.</summary>
@@ -50,10 +50,10 @@ namespace GleamRuntime
         public int get_entity_type_code() { Record("get_entity_type()"); return 1; }
         public int get_ground_type_code() { Record("get_ground_type()"); return 1; }
         public double get_water() { Record("get_water()"); return 0.0; }
-        public int num_items(int item) { Record($"num_items({item})"); return 0; }
+        public long num_items(int item) { Record($"num_items({item})"); return 0; }
         public bool use_item(int item) { Record($"use_item({item})"); return true; }
         public double get_time() { Record("get_time()"); return 0.0; }
-        public int get_tick_count() { Record("get_tick_count()"); return 0; }
+        public long get_tick_count() { Record("get_tick_count()"); return 0; }
 
         private void Record(string call) => Calls.Add(call);
     }

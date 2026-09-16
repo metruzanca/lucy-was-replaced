@@ -45,6 +45,20 @@ namespace GleamFarmer
 
         private static ProgramState NewProgramState() => new(0, new Random(), 0);
 
+        // ResourceManager loads lazily at game start; lookups can throw for a
+        // moment. Treat "not ready" as a plain miss instead of crashing the run.
+        private static FarmObjectSO? TryGetFarmObject(string name)
+        {
+            try { return ResourceManager.GetFarmObject(name); }
+            catch { return null; }
+        }
+
+        private static ItemSO? TryGetItem(string name)
+        {
+            try { return ResourceManager.GetAllItems().FirstOrDefault(x => x.itemName == name); }
+            catch { return null; }
+        }
+
         private void WaitOps(double ops)
         {
             if (ops <= 0) return;
@@ -93,7 +107,7 @@ namespace GleamFarmer
             var ok = OnMain((sim, drone) =>
             {
                 if (string.IsNullOrEmpty(name)) return false;
-                var farmObject = ResourceManager.GetFarmObject(name);
+                var farmObject = TryGetFarmObject(name);
                 return farmObject != null && drone.Plant(farmObject, NewProgramState());
             });
             WaitOps(ok ? 200.0 : 1.0);
@@ -140,19 +154,19 @@ namespace GleamFarmer
 
         public double get_water() => OnMain((sim, drone) => drone.GetWater());
 
-        public int num_items(int item)
+        public long num_items(int item)
         {
             var name = item >= 0 && item < ItemNames.Length ? ItemNames[item] : string.Empty;
             return OnMain((sim, drone) =>
             {
-                if (string.IsNullOrEmpty(name)) return 0;
-                var itemSo = ResourceManager.GetAllItems().FirstOrDefault(x => x.itemName == name);
-                return itemSo == null ? 0 : (int)sim.farm.Items.GetNumber(itemSo.itemId);
+                if (string.IsNullOrEmpty(name)) return 0L;
+                var itemSo = TryGetItem(name);
+                return itemSo == null ? 0L : (long)sim.farm.Items.GetNumber(itemSo.itemId);
             });
         }
 
         public double get_time() => OnMain((sim, drone) => sim.CurrentTime.Seconds);
-        public int get_tick_count() => (int)Interlocked.Read(ref _totalOps);
+        public long get_tick_count() => Interlocked.Read(ref _totalOps);
 
         // ---- print (io.println) ----
 
