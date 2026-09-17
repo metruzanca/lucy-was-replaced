@@ -22,6 +22,19 @@ dlls=(
 rm -rf "$pkg"
 mkdir -p "$plug/Embedded"
 
+echo "==> Writing manifest.json (Thunderstore)"
+cat > "$pkg/manifest.json" <<JSON
+{
+  "name": "Lucy_Was_Replaced",
+  "version_number": "$version",
+  "website_url": "https://github.com/metruzanca/tfwr-gleam",
+  "description": "Replace The Farmer Was Replaced's Python editor with the Gleam language.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305"
+  ]
+}
+JSON
+
 echo "==> Building plugin v$version (Release)"
 dotnet build "$repo_root/src/Plugin/GleamFarmer.csproj" -c Release -p:GameDir=/nonexistent
 bin="$repo_root/src/Plugin/bin/Release/net47"
@@ -47,9 +60,13 @@ cp -r "$repo_root/src/Plugin/Embedded/." "$plug/Embedded/"
 rm -f "$plug/Embedded/.gitignore"
 
 echo "==> Copying docs"
-cp "$repo_root/THIRD_PARTY_NOTICES.md" "$pkg/"
-cp "$repo_root/docs/INSTALL.md" "$pkg/"
+# Thunderstore requires README.md / icon.png / manifest.json / CHANGELOG.md at the zip root.
 cp "$repo_root/README.md" "$pkg/README.md"
+cp "$repo_root/assets/icon.png" "$pkg/icon.png"
+cp "$repo_root/CHANGELOG.md" "$pkg/CHANGELOG.md"
+# Manual-install guide + third-party licenses travel with the plugin (kept out of the game root).
+cp "$repo_root/docs/INSTALL.md" "$plug/"
+cp "$repo_root/THIRD_PARTY_NOTICES.md" "$plug/"
 
 echo "==> Zipping"
 rm -f "$dist/GleamFarmer-$version.zip"
@@ -60,7 +77,9 @@ with zipfile.ZipFile(os.path.join(dist, out), "w", zipfile.ZIP_DEFLATED) as z:
     for root, _, files in os.walk(pkg):
         for f in files:
             full = os.path.join(root, f)
-            z.write(full, os.path.relpath(full, dist))
+            # Entries relative to the package dir so manifest/README/icon/CHANGELOG sit at
+            # the zip root (Thunderstore requirement) and BepInEx/ mirrors the game root.
+            z.write(full, os.path.relpath(full, pkg))
 print(f"wrote {out}")
 PY
 

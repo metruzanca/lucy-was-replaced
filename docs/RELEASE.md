@@ -46,8 +46,11 @@ This:
      `System.ValueTuple`
    - native `wasmtime.dll` (win-x64) from the NuGet cache
    - `Embedded/` (compiler wasm, stdlib, `game` modules, prelude, `game_ffi.mjs`)
-   - `INSTALL.md`, `THIRD_PARTY_NOTICES.md`, `README.md`
-3. Zips it into `dist/GleamFarmer-<version>.zip`.
+   - `INSTALL.md`, `THIRD_PARTY_NOTICES.md` inside the plugin folder
+3. Adds the Thunderstore metadata at the zip root: `manifest.json` (generated from the
+   csproj version), `README.md`, `icon.png` (from `assets/icon.png`), `CHANGELOG.md`.
+4. Zips it into `dist/GleamFarmer-<version>.zip` (entries at the zip root, so manual
+   install = extract into the game root).
 
 The zip extracts into the **game root**: `BepInEx/plugins/GleamFarmer/...`.
 
@@ -94,11 +97,32 @@ minimal set has been validated once; re-check after dependency changes.)
 - **Test before shipping:** `dotnet test tests/GleamRuntime.Tests` (headless)
   plus the `examples/verify.gleam` in-game run (movement + farming + sensors).
 
+## Publish to Thunderstore
+
+The package zip is already Thunderstore-compatible (`manifest.json`, `README.md`,
+`icon.png`, `CHANGELOG.md` at the zip root, plus `BepInEx/plugins/GleamFarmer/…`).
+
+### Manually
+
+1. **Build** the zip: `./scripts/release.sh` (or just `./scripts/package.sh`).
+2. **Validate**:
+   - `unzip -l dist/GleamFarmer-<version>.zip` — root must list `manifest.json`,
+     `README.md`, `icon.png`, `CHANGELOG.md`, then `BepInEx/plugins/GleamFarmer/…`.
+   - Run the manifest through Thunderstore's
+     [Manifest Validator](https://thunderstore.io/tools/manifest-v1-validator/).
+3. **Upload** (web):
+   - Sign in at thunderstore.io (GitHub login works).
+   - *Create package* → choose the **The Farmer Was Replaced** community → your team.
+   - Upload the zip; the manifest fills in name/version/description/dependencies.
+4. **Dependency**: `BepInEx-BepInExPack-5.4.2305` (auto-installed by the mod manager).
+5. **Versioning**: bump `<Version>` in `GleamFarmer.csproj` and re-upload per release
+   (semver; Thunderstore shows the highest version regardless of upload order).
+
 ## Checklist
 
 - [ ] Assets fetched (`fetch-game-assets.sh`, `fetch-stdlib.sh`)
 - [ ] Version bumped in `GleamFarmer.csproj`
-- [ ] `./scripts/package.sh`
+- [ ] `./scripts/release.sh`
 - [ ] Zip inspected (12 DLLs, Embedded present, no game assemblies)
 - [ ] Headless tests pass
 - [ ] Clean-install in-game smoke test passes

@@ -1,4 +1,4 @@
-# GleamFarmer
+# Lucy was Replaced
 
 Replace *The Farmer Was Replaced*'s built-in Python subset with **Gleam**.
 
