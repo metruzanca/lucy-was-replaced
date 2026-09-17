@@ -42,6 +42,9 @@ namespace GleamRuntime
         double random();
         int num_drones();
         int max_drones();
+        int add_drone();            // spawn a drone from this one; returns the new drone id
+        int drone_generation();     // current farm drone generation (for DroneHandle)
+        void remove_drone(int id);  // retire a spawned drone
         bool unlock(string name);
         int num_unlocked(string name);
         void set_execution_speed(double speed);
@@ -56,6 +59,7 @@ namespace GleamRuntime
     public sealed class StubGameBridge : IGameBridge
     {
         public List<string> Calls { get; } = new();
+        private int _droneCounter;
 
         /// <summary>Override for `get_companion` (null by default → None).</summary>
         public int[]? CompanionResult { get; set; }
@@ -97,6 +101,9 @@ namespace GleamRuntime
         public double random() { Record("random()"); return 0.5; }
         public int num_drones() { Record("num_drones()"); return 1; }
         public int max_drones() { Record("max_drones()"); return 4; }
+        public int add_drone() { Record("add_drone()"); AddOps(ActionCost); return ++_droneCounter; }
+        public int drone_generation() { Record("drone_generation()"); return _droneCounter; }
+        public void remove_drone(int id) { Record($"remove_drone({id})"); }
         public bool unlock(string name) { Record($"unlock({name})"); AddOps(ActionCost); return true; }
         public int num_unlocked(string name) { Record($"num_unlocked({name})"); return 2; }
         public void set_execution_speed(double speed) { Record($"set_execution_speed({speed})"); AddOps(ActionCost); }

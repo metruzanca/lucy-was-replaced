@@ -25,6 +25,7 @@ namespace GleamFarmer
         private readonly MainThreadDispatcher _dispatcher;
         private readonly IGleamLogSink _log;
         private readonly TickEngine _ticks;
+        private readonly int _droneId;
         private readonly Random _random = new();
         private double _opDuration = 0.0025;
 
@@ -32,11 +33,13 @@ namespace GleamFarmer
             MainThreadDispatcher dispatcher,
             IGleamRunController run,
             IGleamLogSink log,
-            TickEngine ticks)
+            TickEngine ticks,
+            int droneId = 0)
         {
             _dispatcher = dispatcher;
             _log = log;
             _ticks = ticks;
+            _droneId = droneId;
             _ticks.Pacer.OnBatch = FlushPower;
         }
 
@@ -45,9 +48,11 @@ namespace GleamFarmer
         private T OnMain<T>(Func<Simulation, Drone, T> fn) => _dispatcher.Invoke(() =>
         {
             var sim = Sim;
-            if (sim?.farm?.drones is not { Count: > 0 })
-                throw new InvalidOperationException("The farm is not ready yet.");
-            return fn(sim, sim.farm.drones[0]);
+            if (sim?.farm?.drones is not { Count: > 0 }
+                || _droneId >= sim.farm.drones.Count
+                || sim.farm.drones[_droneId] == null)
+                throw new InvalidOperationException("This drone is no longer active.");
+            return fn(sim, sim.farm.drones[_droneId]);
         });
 
         private static ProgramState NewProgramState() => new(0, new Random(), 0);
@@ -279,6 +284,25 @@ namespace GleamFarmer
         public double random() => _random.NextDouble();
         public int num_drones() => OnMain((sim, drone) => sim.farm.drones.Count);
         public int max_drones() => OnMain((sim, drone) => Helper.NumDrones(sim.farm.NumUnlocked("megafarm")));
+
+        public int add_drone()
+        {
+            var id = OnMain((sim, drone) => sim.farm.AddDrone(_droneId));
+            WaitOps(200.0);
+            return id;
+        }
+
+        public int drone_generation() => OnMain((sim, drone) => sim.farm.droneGeneration);
+
+        public void remove_drone(int id)
+        {
+            OnMain((sim, drone) =>
+            {
+                if (id >= 0 && id < sim.farm.drones.Count && sim.farm.drones[id] != null)
+                    sim.farm.RemoveDrone(id);
+                return true;
+            });
+        }
         public int num_unlocked(string name) => OnMain((sim, drone) =>
             string.IsNullOrEmpty(name) ? 0 : sim.farm.NumUnlocked(name));
 

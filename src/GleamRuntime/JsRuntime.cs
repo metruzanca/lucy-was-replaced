@@ -19,6 +19,7 @@ namespace GleamRuntime
     public sealed class JsRuntime : IDisposable
     {
         private readonly Engine _engine;
+        private readonly OpWeights _weights = new();
 
         public JsRuntime(
             IReadOnlyDictionary<string, string> moduleSources,
@@ -27,7 +28,8 @@ namespace GleamRuntime
             IGameBridge? bridge = null,
             IGleamPrintHandler? print = null,
             CancellationToken cancellationToken = default,
-            TickEngine? ticks = null)
+            TickEngine? ticks = null,
+            IGameDroneHost? drones = null)
         {
             var loader = new GleamModuleLoader(moduleSources);
             _engine = new Engine(options =>
@@ -46,11 +48,14 @@ namespace GleamRuntime
             });
             _engine.SetValue("console", new ConsoleBridge(sink, print));
             _engine.SetValue("__gleam_host", bridge ?? (object)new StubGameBridge());
+            if (drones != null) _engine.SetValue("__gleam_drones", drones);
             if (ticks != null)
             {
                 _engine.Debugger.Step += (_, e) =>
                 {
-                    ticks.OnStep(e.CurrentNode);
+                    // Per-engine weight cache (AST nodes are not shared across engines).
+                    var weight = _weights.Get(e.CurrentNode);
+                    if (weight > 0) ticks.Pacer.Account(weight);
                     return StepMode.Into;
                 };
             }
@@ -58,6 +63,17 @@ namespace GleamRuntime
 
         /// <summary>Execute the package: import the entry wrapper, which calls main().</summary>
         public void RunMain() => _engine.Modules.Import("__entry");
+
+        /// <summary>Execute a specific module (used to run a spawned drone's synthetic entry).</summary>
+        public void RunModule(string moduleKey) => _engine.Modules.Import(moduleKey);
+
+        /// <summary>Read a global string written by the last executed module (drone result).</summary>
+        public string? ReadGlobalString(string name)
+        {
+            var value = _engine.GetValue(name);
+            if (value.IsUndefined() || value.IsNull()) return null;
+            return value.ToString();
+        }
 
         public void Dispose() => _engine.Dispose();
 

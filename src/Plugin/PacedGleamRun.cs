@@ -49,16 +49,23 @@ namespace GleamFarmer
         private void Run()
         {
             Exception? failure = null;
+            DroneController? drones = null;
             try
             {
                 // No wall-clock timeout: pacing waits accumulate real time. The
                 // cancellation token handles Stop (including tight JS loops); the
                 // recursion limit catches runaway recursion.
                 var ticks = new TickEngine(this);
-                var bridge = new RealGameBridge(_dispatcher, this, _log, ticks);
+                var mainBridge = new RealGameBridge(_dispatcher, this, _log, ticks, droneId: 0);
+                drones = new DroneController(
+                    _compiled.Sources, _log, TimeSpan.FromHours(12), ticks, this,
+                    _cancellation.Token,
+                    id => new RealGameBridge(_dispatcher, this, _log, ticks, droneId: id));
+                drones.DroneFailed += _ => _cancellation.Cancel();
+
                 using var js = new JsRuntime(
-                    _compiled.Sources, _log, TimeSpan.FromHours(12), bridge, bridge,
-                    _cancellation.Token, ticks);
+                    _compiled.Sources, _log, TimeSpan.FromHours(12), mainBridge, mainBridge,
+                    _cancellation.Token, ticks, new DroneBridge(drones, 0, mainBridge));
                 js.RunMain();
             }
             catch (GleamStoppedException)
@@ -76,6 +83,8 @@ namespace GleamFarmer
             finally
             {
                 _stopped = true;
+                drones?.Dispose();
+                failure ??= drones?.Failure;
                 if (failure != null) Failed?.Invoke(failure);
                 else Completed?.Invoke();
             }

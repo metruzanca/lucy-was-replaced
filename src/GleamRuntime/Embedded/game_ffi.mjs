@@ -35,3 +35,25 @@ export function do_a_flip() { return __gleam_host.do_a_flip(); }
 export function pet_the_piggy() { return __gleam_host.pet_the_piggy(); }
 export function change_hat(name) { return __gleam_host.change_hat(name); }
 export function quick_print(text) { return __gleam_host.quick_print(text); }
+
+// ---- drones ----
+
+export function spawn_drone_code(count, worker) {
+  if (typeof worker !== "function" || !worker.name) {
+    throw new Error("spawn_drone: the worker must be a named `pub fn` (anonymous functions cannot be spawned)");
+  }
+  return Array.from(__gleam_drones.spawn_drone(count, worker.name));
+}
+export function get_drone_id() { return __gleam_drones.get_drone_id(); }
+export function wait_for_code(id, generation) {
+  const s = __gleam_drones.wait_for(id, generation);
+  return s === null || s === undefined ? null : JSON.parse(s);
+}
+export function has_finished_code(id, generation) { return __gleam_drones.has_finished(id, generation); }
+export function send_code(message, toDroneId) {
+  __gleam_drones.send(JSON.stringify(message === undefined ? null : message), toDroneId);
+}
+export function receive_code(fromDroneId) {
+  const s = __gleam_drones.receive(fromDroneId);
+  return s === null || s === undefined ? null : JSON.parse(s);
+}

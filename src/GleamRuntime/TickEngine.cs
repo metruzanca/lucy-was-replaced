@@ -17,11 +17,14 @@ namespace GleamRuntime
     /// Counting is done with Jint's debugger <c>Step</c> event: it fires once per
     /// executed statement and exposes the Acornima AST node, which
     /// <see cref="OpWeights"/> converts to the game's op cost for that statement.
+    ///
+    /// One engine per drone shares a single <see cref="TickEngine"/>, so the whole
+    /// farm keeps one global tick rate (mirroring the game's `GlobalOpCount`).
+    /// <see cref="OpWeights"/> caches are per-engine (AST nodes are not shared
+    /// across engines).
     /// </summary>
     public sealed class TickEngine
     {
-        private readonly OpWeights _weights = new();
-
         public TickEngine(IGleamRunController? run = null)
         {
             Ops = new OpAccumulator();
@@ -33,13 +36,6 @@ namespace GleamRuntime
 
         /// <summary>Real-time pacing to `ops * OpDuration`.</summary>
         public TickPacer Pacer { get; }
-
-        /// <summary>Called by the JS host for every executed statement.</summary>
-        public void OnStep(Node? node)
-        {
-            var weight = _weights.Get(node);
-            if (weight > 0) Pacer.Account(weight);
-        }
     }
 
     /// <summary>Thread-safe total-op counter backing `get_tick_count`.</summary>
@@ -178,6 +174,7 @@ namespace GleamRuntime
 
         private readonly OpAccumulator _ops;
         private readonly IGleamRunController? _run;
+        private readonly object _gate = new();
         private double _opDurationSeconds = 0.0025;
         private long _batch;
         private long _deadline; // GetTimestamp() units when the current budget is spent
@@ -201,20 +198,27 @@ namespace GleamRuntime
         /// <summary>Invoked on the executing thread with each paced batch (for sim side-effects).</summary>
         public Action<long>? OnBatch { get; set; }
 
-        /// <summary>Account ops and (when pacing is enabled) sleep to stay at the tick rate.</summary>
+        /// <summary>
+        /// Account ops and (when pacing is enabled) sleep to stay at the tick rate.
+        /// Thread-safe: drone engines share one pacer, and the batch lock makes all
+        /// engines yield together once the shared budget is spent (like the game's
+        /// interpreter stepping every state then yielding).
+        /// </summary>
         public void Account(long ops)
         {
             if (ops <= 0) return;
             _ops.Add(ops);
             if (!PacingEnabled) return;
 
-            _batch += ops;
-            var threshold = BatchThreshold;
-            if (_batch < threshold) return;
-            var batch = Interlocked.Exchange(ref _batch, 0);
-            if (batch <= 0) return;
-            Pace(batch);
-            OnBatch?.Invoke(batch);
+            lock (_gate)
+            {
+                _batch += ops;
+                if (_batch < BatchThreshold) return;
+                var batch = _batch;
+                _batch = 0;
+                Pace(batch);
+                OnBatch?.Invoke(batch);
+            }
         }
 
         private long BatchThreshold

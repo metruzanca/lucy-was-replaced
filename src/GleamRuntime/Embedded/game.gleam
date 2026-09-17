@@ -6,7 +6,7 @@
 //! own interpreter: each one costs ops and takes real time.
 
 import game/item
-import gleam/dynamic.{type Dynamic}
+import gleam/dynamic.{classify, type Dynamic}
 import gleam/dynamic/decode
 import gleam/option.{type Option, None, Some}
 
@@ -308,3 +308,99 @@ pub fn change_hat(name: String) -> Nil
 /// Print without pacing (free, no op cost) — unlike `io.println`.
 @external(javascript, "./game_ffi.mjs", "quick_print")
 pub fn quick_print(text: String) -> Nil
+
+// ---- drones ----
+
+/// A handle to a spawned drone, for `wait_for` / `has_finished`.
+pub type DroneHandle {
+  DroneHandle(id: Int, generation: Int)
+}
+
+@external(javascript, "./game_ffi.mjs", "spawn_drone_code")
+fn spawn_drone_code(count: Int, worker: fn() -> Dynamic) -> Dynamic
+
+@external(javascript, "./game_ffi.mjs", "spawn_drone_code")
+fn spawn_drone_code_nil(count: Int, worker: fn() -> Nil) -> Dynamic
+
+/// Spawn `count` drones running `worker`. The worker must be a named `pub fn`
+/// in your module (spawned drones run it in their own engine). Each drone can
+/// tell itself apart with `get_drone_id()`.
+pub fn spawn_drone(count: Int, worker: fn() -> Nil) -> List(DroneHandle) {
+  spawn_drone_code_nil(count, worker)
+  |> decode_handles
+}
+
+/// Like `spawn_drone`, but the worker's return value is available via `wait_for`.
+pub fn spawn_drone_with(count: Int, worker: fn() -> Dynamic) -> List(DroneHandle) {
+  spawn_drone_code(count, worker)
+  |> decode_handles
+}
+
+fn decode_handles(value: Dynamic) -> List(DroneHandle) {
+  case decode.run(value, decode.list(of: decode.int)) {
+    Ok(flat) -> handles_from_flat(flat)
+    Error(_) -> []
+  }
+}
+
+fn handles_from_flat(values: List(Int)) -> List(DroneHandle) {
+  case values {
+    [id, generation, ..rest] ->
+      [DroneHandle(id: id, generation: generation), ..handles_from_flat(rest)]
+    _ -> []
+  }
+}
+
+/// This drone's id (0 is the main drone).
+@external(javascript, "./game_ffi.mjs", "get_drone_id")
+pub fn get_drone_id() -> Int
+
+@external(javascript, "./game_ffi.mjs", "wait_for_code")
+fn wait_for_code(id: Int, generation: Int) -> Dynamic
+
+/// Block until the drone finishes; returns its result as a `Dynamic`
+/// (decode it with `gleam/dynamic/decode`), or `None` if it cannot be awaited.
+pub fn wait_for(handle: DroneHandle) -> Option(Dynamic) {
+  let value = wait_for_code(handle.id, handle.generation)
+  case classify(value) {
+    "Nil" -> None
+    _ -> Some(value)
+  }
+}
+
+/// Whether the drone has finished (non-blocking).
+@external(javascript, "./game_ffi.mjs", "has_finished_code")
+fn has_finished_code(id: Int, generation: Int) -> Bool
+
+pub fn has_finished(handle: DroneHandle) -> Bool {
+  has_finished_code(handle.id, handle.generation)
+}
+
+@external(javascript, "./game_ffi.mjs", "send_code")
+fn send_code(message: Dynamic, to_drone_id: Int) -> Nil
+
+/// Send a message (any JSON-serialisable value) to another drone's mailbox.
+pub fn send(message: Dynamic, to_drone_id: Int) -> Nil {
+  send_code(message, to_drone_id)
+}
+
+@external(javascript, "./game_ffi.mjs", "receive_code")
+fn receive_code(from_drone_id: Int) -> Dynamic
+
+/// Receive a message from any drone (non-blocking); `None` if the mailbox is empty.
+pub fn receive() -> Option(Dynamic) {
+  let value = receive_code(-1)
+  case classify(value) {
+    "Nil" -> None
+    _ -> Some(value)
+  }
+}
+
+/// Receive a message sent specifically by the given drone id.
+pub fn receive_from(drone_id: Int) -> Option(Dynamic) {
+  let value = receive_code(drone_id)
+  case classify(value) {
+    "Nil" -> None
+    _ -> Some(value)
+  }
+}

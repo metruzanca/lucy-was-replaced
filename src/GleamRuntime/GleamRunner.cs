@@ -96,17 +96,38 @@ namespace GleamRuntime
             IGleamLogSink? sink = null,
             TimeSpan? timeout = null,
             IGameBridge? bridge = null,
-            TickEngine? ticks = null)
+            TickEngine? ticks = null,
+            bool enableDrones = false)
         {
-            using var js = new JsRuntime(_sources, sink, timeout, bridge, cancellationToken: default, ticks: ticks);
+            DroneController? drones = null;
+            IGameDroneHost? droneHost = null;
+            if (enableDrones)
+            {
+                ticks ??= new TickEngine();
+                var stub = bridge ?? new StubGameBridge();
+                drones = new DroneController(
+                    _sources, sink, timeout ?? TimeSpan.FromSeconds(30), ticks,
+                    run: null, cancellation: default,
+                    id => new StubGameBridge { Ops = ticks.Ops });
+                droneHost = new DroneBridge(drones, 0, stub);
+            }
+
+            using var js = new JsRuntime(
+                _sources, sink, timeout, bridge, cancellationToken: default, ticks: ticks, drones: droneHost);
             try
             {
                 js.RunMain();
-                return new GleamRunResult(null);
+                return drones?.Failure != null
+                    ? new GleamRunResult(drones.Failure)
+                    : new GleamRunResult(null);
             }
             catch (Exception ex)
             {
                 return new GleamRunResult(ex);
+            }
+            finally
+            {
+                drones?.Dispose();
             }
         }
     }

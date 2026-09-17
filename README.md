@@ -51,8 +51,37 @@ game.set_world_size(4)
 game.do_a_flip()
 ```
 
+Multi-drone:
+
+```gleam
+import game
+
+pub fn main() {
+  let handles = game.spawn_drone(3, worker)   // worker must be a pub fn
+  case handles {
+    [a, b, c, ..] -> {
+      let _ = game.wait_for(a)
+      let _ = game.wait_for(b)
+      let _ = game.wait_for(c)
+    }
+    _ -> game.quick_print("no drones")
+  }
+}
+
+pub fn worker() -> Nil {
+  let me = game.get_drone_id()
+  // ... farm this drone's quadrant ...
+  Nil
+}
+```
+
+Drones run concurrently, each in its own engine/thread, sharing one tick budget and the
+world (actions serialize on the main thread). `game.send(message, drone_id)` /
+`game.receive()` coordinate via mailboxes; `game.has_finished(handle)` polls;
+`game.spawn_drone_with` lets a worker return a value for `game.wait_for`.
+
 Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
-`game.Companion` (from `get_companion`), `game.item.Item`.
+`game.Companion` (from `get_companion`), `game.item.Item`, `game.DroneHandle`.
 
 Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
 `plant`, `till`, `swap`, `clear`, `use_item`, `unlock`, `unlock_item`,
@@ -60,7 +89,9 @@ Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_har
 `quick_print` (free). Sensors (instant): `get_pos`, `get_world_size`,
 `get_entity_type`, `get_ground_type`, `get_water`, `measure`, `measure_at`,
 `get_companion`, `get_cost`, `num_items`, `num_unlocked`, `num_unlocked_item`,
-`num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`.
+`num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`. Drones:
+`spawn_drone`, `spawn_drone_with`, `get_drone_id`, `wait_for`, `has_finished`, `send`,
+`receive`, `receive_from`.
 
 ## Development
 

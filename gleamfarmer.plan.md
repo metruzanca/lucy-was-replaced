@@ -81,7 +81,7 @@ Fast-iteration tooling:
 - [x] Qualified `decode.*`/`game/item` imports internally; unlocks keep the typed Entity/Item + `_by_name` escape hatch
 
 ### M4 — Deferred (explicitly later)
-- Multi-drone: `spawn_drone` / `wait_for` / `has_finished` / `send` / `receive` (needs function-value FFI + drone handles)
+- ~~Multi-drone~~ ✅ (see M8)
 - Meta: `leaderboard_run` / `simulate` / `tap`
 - Pure-Python builtins (`range`/`len`/`min`/`max`/`abs`/`str`/`list`/`set`/`dict`) — use Gleam stdlib equivalents instead
 
@@ -128,6 +128,36 @@ server (Gleam!) and route scores there instead of Steam. The `LeaderboardDisable
 official boards off; a future FFI (`game.leaderboard_*`) + a small Gleam HTTP server would
 give the same challenge runs with a Gleam-native leaderboard. Untracked for now; the M4
 deferred `leaderboard_run`/`simulate`/`tap` builtins could feed it.
+
+---
+
+### M8 — Multi-drone ✅ COMPLETE
+Decisions: true concurrency (one worker thread + one Jint engine per drone) since Jint
+cannot preempt a synchronous call stack; workers resolved **by name** — Gleam preserves
+function names in its JS output, so a `pub fn` passed by value carries `.name`, and a fresh
+drone engine imports it from the shared module graph (no closure reconstruction).
+- [x] `DroneController` (GleamRuntime): child threads/engines, synthetic `__drone_<id>`
+      modules (`import { worker } from "./main.mjs"; JSON.stringify(worker())`), completion
+      signals, JSON mailboxes, `__gleam_drones` per-engine host, Stop/join
+- [x] `IGameBridge` + `RealGameBridge` drone-id-aware (`add_drone`/`remove_drone`/`drone_generation`,
+      `drones[_droneId]`); `StubGameBridge` for headless tests
+- [x] `TickPacer` made thread-safe (shared global budget across engines); `OpWeights` cache
+      per-engine (AST nodes are not shared across engines)
+- [x] `game.gleam`/`game_ffi.mjs` drone API: `spawn_drone`/`spawn_drone_with`, `get_drone_id`,
+      `wait_for`, `has_finished`, `send`, `receive`, `receive_from`, `DroneHandle`
+      (null→`None` via `dynamic.classify`, results marshal as JSON `Dynamic`)
+- [x] `PacedGleamRun` wires the controller; drone failure cancels the whole run
+- [x] Tests (7): worker result via wait_for, 3 concurrent workers by id, send/receive,
+      has_finished polling, anonymous-worker error, missing-handle None, infinite-worker stop
+- [x] Example `examples/multidrone.gleam`
+- [ ] In-game validation: 3-drone quadrant farm, send/receive coordination, stop with drones alive
+
+Documented v1 limitations:
+- Workers must be `pub fn` in the editor module (anonymous closures rejected with a clear error).
+- Module-level state is per-engine (each drone re-evaluates the module), not shared like the game.
+- Results/messages are JSON-only (`Dynamic`; decode with `gleam/dynamic/decode`).
+- `send` delivers immediately, not op-delayed like the game's `MessageChannel`.
+- `clear()` while drones run is best-effort (drone objects may be removed).
 
 ---
 

@@ -29,7 +29,7 @@ if (args is ["--file", var filePath])
     {
         var compiled = runner.Compile(source);
         var sink = new Sink();
-        var result = compiled.Run(sink, TimeSpan.FromSeconds(5));
+        var result = compiled.Run(sink, TimeSpan.FromSeconds(30), enableDrones: true);
         if (result.Error != null)
         {
             Console.Error.WriteLine("RUNTIME ERROR: " + result.Error.Message);
