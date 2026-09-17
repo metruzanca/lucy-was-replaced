@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GleamRuntime;
@@ -26,6 +27,7 @@ namespace GleamFarmer
         private readonly MainThreadDispatcher _dispatcher = new();
         private readonly object _runLock = new();
         private PacedGleamRun? _activeRun;
+        private volatile bool _compiling;
 
         private GleamHost(GleamRunner runner, ConfigEntry<bool> enabled)
         {
@@ -93,11 +95,18 @@ namespace GleamFarmer
                 if (_activeRun != null)
                 {
                     Log.LogInfo("GleamFarmer: stopping run…");
-                    _activeRun.Dispose();
+                    var run = _activeRun;
                     _activeRun = null;
-                    window.StopExecutionMode();
+                    run.Stop();                 // non-blocking; the worker cleans up + fires Completed (stale-guarded)
+                    window.StopExecutionMode(); // immediate UI feedback
                     return true;
                 }
+            }
+
+            if (_compiling)
+            {
+                Log.LogInfo("GleamFarmer: still compiling, ignoring Run…");
+                return true;
             }
 
             try
@@ -113,39 +122,72 @@ namespace GleamFarmer
                 moduleNames.AddRange(userModules.Select(m => m.Item1));
                 Log.LogInfo($"GleamFarmer: compiling… modules: {string.Join(", ", moduleNames)}");
 
-                var compiled = _runner.Compile(source, entryName, userModules);
-
-                var sink = new PluginSink(Log);
-                var run = new PacedGleamRun(compiled, _dispatcher, sink);
-                run.Completed += () => OnRunFinished(window, sink, error: null);
-                run.Failed += error => OnRunFinished(window, sink, error);
-
-                lock (_runLock)
+                // Compile off the Unity main thread so the WASM compile (~100-300ms) doesn't
+                // stutter the game; the cheap, Unity-touching window gathering above stays on
+                // the main thread.
+                _compiling = true;
+                new Thread(() => CompileAndStart(window, source, entryName, userModules))
                 {
-                    _activeRun = run;
-                }
-
-                window.StartExecutionMode();
-                run.Start();
-                Log.LogInfo("GleamFarmer: run started.");
-                return true;
-            }
-            catch (GleamCompileException ex)
-            {
-                ShowError(window, ex.Message);
+                    IsBackground = true,
+                    Name = "GleamFarmer-compile",
+                }.Start();
                 return true;
             }
             catch (Exception ex)
             {
+                _compiling = false;
                 ShowError(window, ex.Message);
                 return true;
             }
         }
 
-        private void OnRunFinished(CodeWindow window, PluginSink sink, Exception? error)
+        /// <summary>Runs on a background thread: compile, then start the run on the main thread.</summary>
+        private void CompileAndStart(
+            CodeWindow window, string source, string entryName, List<(string, string)> userModules)
+        {
+            try
+            {
+                var compiled = _runner.Compile(source, entryName, userModules);
+                _dispatcher.Invoke(() =>
+                {
+                    var sink = new PluginSink(Log);
+                    var run = new PacedGleamRun(compiled, _dispatcher, sink);
+                    run.Completed += () => OnRunFinished(window, run, sink, error: null);
+                    run.Failed += error => OnRunFinished(window, run, sink, error);
+
+                    lock (_runLock)
+                    {
+                        if (_activeRun != null) return true; // superseded before start
+                        _activeRun = run;
+                    }
+
+                    window.StartExecutionMode();
+                    run.Start();
+                    Log.LogInfo("GleamFarmer: run started.");
+                    return true;
+                });
+            }
+            catch (GleamCompileException ex)
+            {
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message); return true; });
+            }
+            catch (Exception ex)
+            {
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message); return true; });
+            }
+            finally
+            {
+                _compiling = false;
+            }
+        }
+
+        private void OnRunFinished(CodeWindow window, PacedGleamRun run, PluginSink sink, Exception? error)
         {
             lock (_runLock)
             {
+                // A stopped run's Completed can fire after the player already started (or is
+                // starting) the next one; only the current run may touch the UI/state.
+                if (!ReferenceEquals(run, _activeRun)) return;
                 _activeRun = null;
             }
 

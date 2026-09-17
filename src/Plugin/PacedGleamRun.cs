@@ -14,7 +14,6 @@ namespace GleamFarmer
         private readonly MainThreadDispatcher _dispatcher;
         private readonly IGleamLogSink _log;
         private readonly CancellationTokenSource _cancellation = new();
-        private Thread? _thread;
         private volatile bool _stopped;
 
         public PacedGleamRun(CompiledGleam compiled, MainThreadDispatcher dispatcher, IGleamLogSink log)
@@ -35,8 +34,7 @@ namespace GleamFarmer
         public void Start()
         {
             _stopped = false;
-            _thread = new Thread(Run) { IsBackground = true, Name = "GleamFarmer" };
-            _thread.Start();
+            new Thread(Run) { IsBackground = true, Name = "GleamFarmer" }.Start();
         }
 
         /// <summary>Abort the run at the next action boundary (or interrupt JS).</summary>
@@ -84,17 +82,20 @@ namespace GleamFarmer
             {
                 _stopped = true;
                 drones?.Dispose();
+                _cancellation.Dispose();
                 failure ??= drones?.Failure;
                 if (failure != null) Failed?.Invoke(failure);
                 else Completed?.Invoke();
             }
         }
 
-        public void Dispose()
-        {
-            Stop();
-            _thread?.Join(2000);
-            _cancellation.Dispose();
-        }
+        /// <summary>
+        /// Non-blocking: signals the worker to stop and returns immediately. The worker
+        /// disposes the cancellation source itself in its <see cref="Run"/> finally block.
+        /// Joining on the caller (Unity main thread) would stall it up to 2s while the
+        /// worker finishes, and would deadlock if the worker is mid-dispatch waiting for
+        /// the main thread to pump.
+        /// </summary>
+        public void Dispose() => Stop();
     }
 }
