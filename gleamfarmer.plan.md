@@ -159,6 +159,46 @@ Documented v1 limitations:
 - `send` delivers immediately, not op-delayed like the game's `MessageChannel`.
 - `clear()` while drones run is best-effort (drone objects may be removed).
 
+### M9 — Auto-format Gleam on Run (deferred work item)
+Motivation: the game editor's indentation keys are painful (shift-tab is hijacked by the Steam
+overlay), so formatting should just happen automatically. When the player presses Run:
+**format → write formatted text back to the editor → compile the *same* formatted text**, so
+diagnostics always point at the visible lines. Since we compile exactly what we show, the
+formatter does not need to be byte-identical to `gleam format`.
+
+Chosen approach (**Option B**): bundle the real `gleam` CLI and shell out, for exact `gleam format`
+output. Research findings that shaped this:
+- The embedded Gleam **WASM compiler exposes no `format` export** (formatter is in the binary,
+  but the wasm-bindgen surface is compile-only — `gleam_wasm.d.ts` has no format).
+- `gleam format` takes **file paths only** (`gleam format -` on stdin fails with "File IO
+  failure"), so the plugin must write a temp file, run the CLI on it, read it back, and delete it.
+- `gleam format` **refuses malformed code** (returns a syntax error), so on format failure the
+  flow must fall back to compiling the original editor text untouched (brackets stay as typed,
+  errors reference the original lines).
+
+Implementation notes (Option B):
+- Package a **win-x64 `gleam.exe`** with the mod (works natively on Windows and under Wine/Proton).
+  Add a fetch step (like `fetch-stdlib.sh`) downloading the pinned `gleam-<ver>-x86_64-pc-windows-gnu.exe`
+  release into `src/Plugin/Embedded/`; include it in `scripts/package.sh`'s DLL set.
+- `GleamHost.Run(window)`: after `GetCodeText`, when a new `AutoFormat` config (default true) is
+  set, spawn `gleam.exe format <tmp.gleam>` (temp file in the plugin dir), read back, `SetCodeText`
+  (new reflection helper mirroring `GetCodeText`), then compile the formatted text.
+- Errors: compile diagnostics are already `src/main.gleam:N:C`; with the editor showing the
+  formatted text, N:C now points at the visible lines.
+- Config toggle `AutoFormat` in `Config.Bind("General", "AutoFormat", true, …)` for players who
+  want their exact formatting preserved.
+- Tests: headless `GleamFormatterTests` are not applicable (real CLI), but add a `scripts/`
+  helper + harness check that formats a fixture and compiles the result; verify idempotence
+  (`gleam format` output is stable).
+- Risks: process spawn per Run (~100-500 ms), temp-file hygiene (cleanup on stop/crash), Wine
+  compatibility of spawning the Windows exe, +~25 MB package size.
+- Alternative considered: custom C# reindenter (zero-dep, instant, no reflow, not byte-identical)
+  — revisit if the CLI turns out too heavy to ship.
+- [ ] fetch + package the win-x64 `gleam.exe`
+- [ ] `AutoFormat` config + format→SetCodeText→compile flow in `GleamHost.Run`
+- [ ] temp-file lifecycle + failure fallback (compile original)
+- [ ] in-game validation: formatting fixes indentation, editor updates, errors align to formatted lines
+
 ---
 
 ## Decisions (locked)
