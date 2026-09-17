@@ -21,6 +21,9 @@ namespace GleamRuntime
         bool can_harvest();
         bool plant(int entity);
         void till();
+        bool swap(int direction);
+        void clear();
+        bool use_item(int item, int count);
         int get_pos_x();
         int get_pos_y();
         int get_world_size();
@@ -28,9 +31,25 @@ namespace GleamRuntime
         int get_ground_type_code();
         double get_water();
         long num_items(int item);
-        bool use_item(int item);
         double get_time();
         long get_tick_count();
+
+        // ---- utilities ----
+        double? measure();
+        double? measure_at(int direction);
+        int[]? get_companion();         // [entityCode, x, y] or null
+        int[] get_cost(int entity);     // flat [itemId, count, ...] pairs
+        double random();
+        int num_drones();
+        int max_drones();
+        bool unlock(string name);
+        int num_unlocked(string name);
+        void set_execution_speed(double speed);
+        void set_world_size(int size);
+        void do_a_flip();
+        void pet_the_piggy();
+        void change_hat(string name);
+        void quick_print(string text);
     }
 
     /// <summary>Headless bridge for the CLI and tests: records every call, returns canned values.</summary>
@@ -38,12 +57,18 @@ namespace GleamRuntime
     {
         public List<string> Calls { get; } = new();
 
+        /// <summary>Override for `get_companion` (null by default → None).</summary>
+        public int[]? CompanionResult { get; set; }
+
         public bool move(int direction) { Record($"move({direction})"); return true; }
         public bool can_move(int direction) { Record($"can_move({direction})"); return true; }
         public bool harvest() { Record("harvest()"); return true; }
         public bool can_harvest() { Record("can_harvest()"); return true; }
         public bool plant(int entity) { Record($"plant({entity})"); return true; }
         public void till() { Record("till()"); }
+        public bool swap(int direction) { Record($"swap({direction})"); return true; }
+        public void clear() { Record("clear()"); }
+        public bool use_item(int item, int count) { Record($"use_item({item}, {count})"); return true; }
         public int get_pos_x() { Record("get_pos_x()"); return 0; }
         public int get_pos_y() { Record("get_pos_y()"); return 0; }
         public int get_world_size() { Record("get_world_size()"); return 3; }
@@ -51,9 +76,25 @@ namespace GleamRuntime
         public int get_ground_type_code() { Record("get_ground_type()"); return 1; }
         public double get_water() { Record("get_water()"); return 0.0; }
         public long num_items(int item) { Record($"num_items({item})"); return 0; }
-        public bool use_item(int item) { Record($"use_item({item})"); return true; }
         public double get_time() { Record("get_time()"); return 0.0; }
         public long get_tick_count() { Record("get_tick_count()"); return 0; }
+
+        // ---- utilities (canned, deterministic) ----
+        public double? measure() { Record("measure()"); return 1.5; }
+        public double? measure_at(int direction) { Record($"measure_at({direction})"); return null; }
+        public int[]? get_companion() { Record("get_companion()"); return CompanionResult; }
+        public int[] get_cost(int entity) { Record($"get_cost({entity})"); return new[] { 3, 2, 8, 1 }; } // [(Carrot,2),(Water,1)]
+        public double random() { Record("random()"); return 0.5; }
+        public int num_drones() { Record("num_drones()"); return 1; }
+        public int max_drones() { Record("max_drones()"); return 4; }
+        public bool unlock(string name) { Record($"unlock({name})"); return true; }
+        public int num_unlocked(string name) { Record($"num_unlocked({name})"); return 2; }
+        public void set_execution_speed(double speed) { Record($"set_execution_speed({speed})"); }
+        public void set_world_size(int size) { Record($"set_world_size({size})"); }
+        public void do_a_flip() { Record("do_a_flip()"); }
+        public void pet_the_piggy() { Record("pet_the_piggy()"); }
+        public void change_hat(string name) { Record($"change_hat({name})"); }
+        public void quick_print(string text) { Record($"quick_print({text})"); }
 
         private void Record(string call) => Calls.Add(call);
     }

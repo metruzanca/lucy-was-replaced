@@ -1,9 +1,13 @@
 //! GleamFarmer's bridge to The Farmer Was Replaced.
 //!
 //! `import game` gives typed access to the game world: the drone, the farm,
-//! movement, planting, harvesting, and sensors. Actions are paced like the
-//! game's own interpreter: each one costs ops and takes real time.
+//! movement, planting, harvesting, sensors, and utilities (swap, clear,
+//! measure, costs, progression, cosmetics). Actions are paced like the game's
+//! own interpreter: each one costs ops and takes real time.
 
+import game/item
+import gleam/dynamic.{type Dynamic}
+import gleam/dynamic/decode
 import gleam/option.{type Option, None, Some}
 
 pub type Direction {
@@ -30,28 +34,37 @@ pub type Ground {
   Grassland
 }
 
+/// A position on the farm grid.
+pub type Position {
+  Position(x: Int, y: Int)
+}
+
+/// The companion a growable needs nearby.
+pub type Companion {
+  Companion(entity: Entity, position: Position)
+}
+
+fn direction_code(direction: Direction) -> Int {
+  case direction {
+    North -> 0
+    East -> 1
+    South -> 2
+    West -> 3
+  }
+}
+
 @external(javascript, "./game_ffi.mjs", "move_code")
 fn move_code(direction: Int) -> Bool
 
 pub fn move(direction: Direction) -> Bool {
-  case direction {
-    North -> move_code(0)
-    East -> move_code(1)
-    South -> move_code(2)
-    West -> move_code(3)
-  }
+  move_code(direction_code(direction))
 }
 
 @external(javascript, "./game_ffi.mjs", "can_move_code")
 fn can_move_code(direction: Int) -> Bool
 
 pub fn can_move(direction: Direction) -> Bool {
-  case direction {
-    North -> can_move_code(0)
-    East -> can_move_code(1)
-    South -> can_move_code(2)
-    West -> can_move_code(3)
-  }
+  can_move_code(direction_code(direction))
 }
 
 @external(javascript, "./game_ffi.mjs", "harvest")
@@ -60,7 +73,7 @@ pub fn harvest() -> Bool
 @external(javascript, "./game_ffi.mjs", "can_harvest")
 pub fn can_harvest() -> Bool
 
-fn entity_code(entity: Entity) -> Int {
+pub fn entity_code(entity: Entity) -> Int {
   case entity {
     Grass -> 1
     Bush -> 2
@@ -71,6 +84,35 @@ fn entity_code(entity: Entity) -> Int {
     Cactus -> 7
     Treasure -> 8
     Hedge -> 9
+  }
+}
+
+fn entity_name(entity: Entity) -> String {
+  case entity {
+    Grass -> "grass"
+    Bush -> "bush"
+    Carrot -> "carrot"
+    Pumpkin -> "pumpkin"
+    Sunflower -> "sunflower"
+    Tree -> "tree"
+    Cactus -> "cactus"
+    Treasure -> "treasure"
+    Hedge -> "hedge"
+  }
+}
+
+fn entity_from_code(code: Int) -> Entity {
+  case code {
+    1 -> Grass
+    2 -> Bush
+    3 -> Carrot
+    4 -> Pumpkin
+    5 -> Sunflower
+    6 -> Tree
+    7 -> Cactus
+    8 -> Treasure
+    9 -> Hedge
+    _ -> Grass
   }
 }
 
@@ -85,10 +127,15 @@ pub fn plant(entity: Entity) -> Bool {
 pub fn till() -> Nil
 
 @external(javascript, "./game_ffi.mjs", "get_pos_x")
-pub fn get_pos_x() -> Int
+fn get_pos_x() -> Int
 
 @external(javascript, "./game_ffi.mjs", "get_pos_y")
-pub fn get_pos_y() -> Int
+fn get_pos_y() -> Int
+
+/// The drone's current position on the grid.
+pub fn get_pos() -> Position {
+  Position(x: get_pos_x(), y: get_pos_y())
+}
 
 @external(javascript, "./game_ffi.mjs", "get_world_size")
 pub fn get_world_size() -> Int
@@ -130,3 +177,134 @@ pub fn get_time() -> Float
 
 @external(javascript, "./game_ffi.mjs", "get_tick_count")
 pub fn get_tick_count() -> Int
+
+// ---- utilities ----
+
+@external(javascript, "./game_ffi.mjs", "swap_code")
+fn swap_code(direction: Int) -> Bool
+
+/// Move the entity on the current tile to the adjacent tile (if it is empty).
+pub fn swap(direction: Direction) -> Bool {
+  swap_code(direction_code(direction))
+}
+
+/// Clear the whole farm: despawns extra drones, resets the drone, and removes
+/// every entity and ground.
+@external(javascript, "./game_ffi.mjs", "clear")
+pub fn clear() -> Nil
+
+@external(javascript, "./game_ffi.mjs", "measure")
+fn measure_code() -> Dynamic
+
+/// Growth progress of the entity on the current tile, if it has one.
+/// Returns `None` when the tile is empty or the entity cannot be measured.
+pub fn measure() -> Option(Float) {
+  case decode.run(measure_code(), decode.float) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
+}
+
+@external(javascript, "./game_ffi.mjs", "measure_at_code")
+fn measure_at_code(direction: Int) -> Dynamic
+
+/// Growth progress of the entity on the adjacent tile.
+pub fn measure_at(direction: Direction) -> Option(Float) {
+  case decode.run(measure_at_code(direction_code(direction)), decode.float) {
+    Ok(value) -> Some(value)
+    Error(_) -> None
+  }
+}
+
+@external(javascript, "./game_ffi.mjs", "get_companion")
+fn companion_code() -> Dynamic
+
+/// The companion a growable needs nearby: `Some(Companion)`, or `None` when
+/// the entity has no companion requirement.
+pub fn get_companion() -> Option(Companion) {
+  case decode.run(companion_code(), decode.list(of: decode.int)) {
+    Ok([code, x, y]) ->
+      Some(Companion(
+        entity: entity_from_code(code),
+        position: Position(x: x, y: y),
+      ))
+    _ -> None
+  }
+}
+
+@external(javascript, "./game_ffi.mjs", "get_cost_code")
+fn cost_code(entity: Int) -> Dynamic
+
+/// The seed (or item) cost of growing an entity, as item counts.
+pub fn get_cost(entity: Entity) -> List(#(item.Item, Int)) {
+  case decode.run(cost_code(entity_code(entity)), decode.list(of: decode.int)) {
+    Ok(values) -> cost_pairs(values)
+    Error(_) -> []
+  }
+}
+
+fn cost_pairs(values: List(Int)) -> List(#(item.Item, Int)) {
+  case values {
+    [id, count, ..rest] -> {
+      case item.item_from_id(id) {
+        Some(it) -> [#(it, count), ..cost_pairs(rest)]
+        None -> cost_pairs(rest)
+      }
+    }
+    _ -> []
+  }
+}
+
+@external(javascript, "./game_ffi.mjs", "random")
+pub fn random() -> Float
+
+@external(javascript, "./game_ffi.mjs", "num_drones")
+pub fn num_drones() -> Int
+
+@external(javascript, "./game_ffi.mjs", "max_drones")
+pub fn max_drones() -> Int
+
+@external(javascript, "./game_ffi.mjs", "unlock_code")
+fn unlock_code(name: String) -> Bool
+
+/// Spend resources to unlock (or upgrade) an entity, e.g. its seeds.
+pub fn unlock(entity: Entity) -> Bool {
+  unlock_code(entity_name(entity))
+}
+
+/// Spend resources to unlock anything by its unlock name (e.g. "multi_trade").
+pub fn unlock_by_name(name: String) -> Bool {
+  unlock_code(name)
+}
+
+@external(javascript, "./game_ffi.mjs", "num_unlocked_code")
+fn num_unlocked_code(name: String) -> Int
+
+/// How many times an entity's unlock has been bought (0 = not unlocked).
+pub fn num_unlocked(entity: Entity) -> Int {
+  num_unlocked_code(entity_name(entity))
+}
+
+/// How many times an unlock name has been bought (0 = not unlocked).
+pub fn num_unlocked_by_name(name: String) -> Int {
+  num_unlocked_code(name)
+}
+
+@external(javascript, "./game_ffi.mjs", "set_execution_speed")
+pub fn set_execution_speed(speed: Float) -> Nil
+
+@external(javascript, "./game_ffi.mjs", "set_world_size")
+pub fn set_world_size(size: Int) -> Nil
+
+@external(javascript, "./game_ffi.mjs", "do_a_flip")
+pub fn do_a_flip() -> Nil
+
+@external(javascript, "./game_ffi.mjs", "pet_the_piggy")
+pub fn pet_the_piggy() -> Nil
+
+@external(javascript, "./game_ffi.mjs", "change_hat")
+pub fn change_hat(name: String) -> Nil
+
+/// Print without pacing (free, no op cost) — unlike `io.println`.
+@external(javascript, "./game_ffi.mjs", "quick_print")
+pub fn quick_print(text: String) -> Nil

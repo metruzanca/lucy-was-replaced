@@ -51,8 +51,8 @@ Legend: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked
 - [ ] FarmerLib mod options: toggle Gleam mode (config entry exists; UI option later)
 - [x] Acceptance: Gleam program typed in-game runs and prints ✅ (examples/hello.gleam → hello/total/strings in game log)
 
-### M4 — `game` FFI (paced farm API) ✅ COMPLETE (v1: movement + farming + sensors)
-Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); custom Gleam types for constants; v1 scope = movement + farming + sensors.
+### M4 — `game` FFI (paced farm API) ✅ COMPLETE (v1: movement + farming + sensors; v2: utilities breadth)
+Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); custom Gleam types for constants; v1 scope = movement + farming + sensors; v2 adds the full utility builtin set.
 - [x] Rename `tfwr` → `game`: `game.gleam` (custom types Direction/Entity/Ground + pattern-match→code) + `game/item.gleam` (Item), `game_ffi.mjs` primitive host bridge, `StubGameBridge`, tests green (7/7)
 - [x] `IGameBridge` + `StubGameBridge` wired into `JsRuntime` as `__gleam_host` (default stub; plugin passes real bridge later) — methods named to match JS (Jint is case-insensitive but no underscore stripping)
 - [x] `RealGameBridge`: main-thread dispatch (plugin `Update()` pump), `sim.farm.drones[0]` calls, op-cost pacing waits, `ResourceManager` SO lookups
@@ -65,10 +65,25 @@ Fast-iteration tooling:
 - `scripts/run-gleam.sh <file.gleam>` — headless compile+run (same runtime as the plugin)
 - `scripts/push-to-game-save.sh <file.gleam> [save]` — hot-reload a snippet into the game's editor via the file watcher
 
-### M4 — Farm API FFI (explicitly later)
-- [ ] Implement game verbs in JS host backed by publicized `Core.dll` (Farm/GridManager/inventory)
-- [ ] Value marshalling across Jint↔CLR
-- [ ] Smoke test: automate a real farm task from Gleam
+### M4 — Farm API FFI ✅ COMPLETE (v2: utilities breadth)
+- [x] Implement game verbs in JS host backed by publicized `Core.dll` (Farm/GridManager/inventory)
+- [x] Value marshalling across Jint↔CLR (primitives, null→Option, CLR arrays→JS lists via `Array.from` + `gleam/dynamic/decode`)
+- [x] Cover all remaining game builtins as typed `game` functions: `swap`, `clear`, `measure`, `measure_at`, `get_companion`, `get_cost`, `random`, `num_drones`, `max_drones`, `unlock`, `num_unlocked`, `set_execution_speed`, `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`, `quick_print`, plus `item.use_items`/`item.unlock_item`/`item.num_unlocked_item`
+- [x] `use_item` now handles water **and** fertilizer, with inventory checks + count overload
+- [x] Tests (9/9 green): all new verbs route to the bridge; typed decoding verified (measure `Some`, companion `None`, cost item pairs)
+- [ ] Smoke test in-game: automate a real farm task using utilities (swap/measure/cost)
+
+### M4-4 — API polish (idiomatic Gleam)
+- [x] `game.Position` record + `get_pos()`; removed loose `get_pos_x`/`get_pos_y` from the public API
+- [x] `game.Companion(entity, position)` record; `get_companion() -> Option(Companion)` (no nested tuples)
+- [x] `item.use_item_n` → `item.use_items`
+- [x] Teaching examples: `case`-checked actions + `use <- bool.guard` for sensor-gated actions
+- [x] Qualified `decode.*`/`game/item` imports internally; unlocks keep the typed Entity/Item + `_by_name` escape hatch
+
+### M4 — Deferred (explicitly later)
+- Multi-drone: `spawn_drone` / `wait_for` / `has_finished` / `send` / `receive` (needs function-value FFI + drone handles)
+- Meta: `leaderboard_run` / `simulate` / `tap`
+- Pure-Python builtins (`range`/`len`/`min`/`max`/`abs`/`str`/`list`/`set`/`dict`) — use Gleam stdlib equivalents instead
 
 ### M5 — Packaging & distribution ✅ COMPLETE
 - [x] `scripts/package.sh` → `dist/GleamFarmer-<version>.zip` (12 DLLs incl. native wasmtime, embedded wasm/stdlib/game, docs; no game assemblies)

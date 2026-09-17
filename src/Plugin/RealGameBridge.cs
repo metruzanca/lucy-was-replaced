@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -24,6 +25,7 @@ namespace GleamFarmer
         private readonly MainThreadDispatcher _dispatcher;
         private readonly IGleamRunController _run;
         private readonly IGleamLogSink _log;
+        private readonly Random _random = new();
         private long _totalOps;
 
         public RealGameBridge(MainThreadDispatcher dispatcher, IGleamRunController run, IGleamLogSink log)
@@ -56,6 +58,18 @@ namespace GleamFarmer
         private static ItemSO? TryGetItem(string name)
         {
             try { return ResourceManager.GetAllItems().FirstOrDefault(x => x.itemName == name); }
+            catch { return null; }
+        }
+
+        private static UnlockSO? TryGetUnlock(string name)
+        {
+            try { return ResourceManager.GetUnlock(name); }
+            catch { return null; }
+        }
+
+        private static HatSO? TryGetHat(string name)
+        {
+            try { return ResourceManager.GetHat(name); }
             catch { return null; }
         }
 
@@ -124,13 +138,41 @@ namespace GleamFarmer
             WaitOps(200.0);
         }
 
-        public bool use_item(int item)
+        public bool swap(int direction)
+        {
+            var ok = OnMain((sim, drone) => drone.Swap((GridDirection)direction, NewProgramState()));
+            WaitOps(ok ? 200.0 : 1.0);
+            return ok;
+        }
+
+        public void clear()
+        {
+            OnMain((sim, drone) =>
+            {
+                sim.farm.RemoveSpawnedDrones();
+                sim.farm.drones[0].ResetPos();
+                sim.farm.grid.ClearGrid();
+                return true;
+            });
+            WaitOps(200.0);
+        }
+
+        public bool use_item(int item, int count)
         {
             var name = item >= 0 && item < ItemNames.Length ? ItemNames[item] : string.Empty;
             var ok = OnMain((sim, drone) =>
             {
-                if (name != "water") return false; // v1: only watering
-                return drone.Water(1);
+                if (count < 1 || string.IsNullOrEmpty(name)) return false;
+                var itemSo = TryGetItem(name);
+                if (itemSo == null || !sim.farm.Items.Contains(itemSo.itemId, count)) return false;
+                var used = name switch
+                {
+                    "water" => drone.Water(count),
+                    "fertilizer" => drone.Fertilize(count),
+                    _ => false,
+                };
+                if (used) sim.farm.Items.RemoveItem(itemSo.itemId, count);
+                return used;
             });
             WaitOps(ok ? 200.0 : 1.0);
             return ok;
@@ -168,6 +210,142 @@ namespace GleamFarmer
         public double get_time() => OnMain((sim, drone) => sim.CurrentTime.Seconds);
         public long get_tick_count() => Interlocked.Read(ref _totalOps);
 
+        // ---- utility sensors (instant) ----
+
+        public double? measure() => OnMain((sim, drone) =>
+            MeasureOf(drone.EntityUnderDrone()?.Measure()));
+
+        public double? measure_at(int direction) => OnMain((sim, drone) =>
+        {
+            var dir = (GridDirection)direction;
+            var key = sim.farm.grid.Wrap(drone.pos + dir.GetDirectionVector());
+            if (!sim.farm.grid.entities.TryGetValue(key, out var entity)) return (double?)null;
+            return MeasureOf(entity.Measure());
+        });
+
+        private static double? MeasureOf(object? value) =>
+            value is PyNumber number ? (double)number : (double?)null;
+
+        public int[]? get_companion() => OnMain<int[]?>((sim, drone) =>
+        {
+            if (!sim.farm.grid.entities.TryGetValue(drone.pos, out var entity) || entity is not Growable growable)
+                return null;
+            var companion = growable.GetCompanion();
+            if (companion is not PyTuple tuple
+                || tuple.Count != 2
+                || tuple[0] is not FarmObjectSO so
+                || tuple[1] is not PyTuple pos
+                || pos.Count != 2
+                || pos[0] is not PyNumber px
+                || pos[1] is not PyNumber py)
+                return null;
+            return new[] { Array.IndexOf(EntityNames, so.objectName), (int)(double)px, (int)(double)py };
+        });
+
+        public int[] get_cost(int entity)
+        {
+            var name = entity >= 0 && entity < EntityNames.Length ? EntityNames[entity] : string.Empty;
+            return OnMain((sim, drone) =>
+            {
+                if (string.IsNullOrEmpty(name)) return Array.Empty<int>();
+                var farmObject = TryGetFarmObject(name);
+                if (farmObject == null) return Array.Empty<int>();
+
+                var cost = farmObject.cost;
+                var factor = 1;
+                if (!string.IsNullOrEmpty(farmObject.yieldUpgradeName))
+                    factor = 1 << Math.Max(0, sim.farm.NumUnlocked(farmObject.yieldUpgradeName) - 1);
+
+                var flat = new List<int>();
+                for (var i = 0; i < cost.items.Length; i++)
+                {
+                    var count = cost.items[i] * factor;
+                    if (count > 0) { flat.Add(i); flat.Add((int)count); }
+                }
+                return flat.ToArray();
+            });
+        }
+
+        public double random() => _random.NextDouble();
+        public int num_drones() => OnMain((sim, drone) => sim.farm.drones.Count);
+        public int max_drones() => OnMain((sim, drone) => Helper.NumDrones(sim.farm.NumUnlocked("megafarm")));
+        public int num_unlocked(string name) => OnMain((sim, drone) =>
+            string.IsNullOrEmpty(name) ? 0 : sim.farm.NumUnlocked(name));
+
+        public bool unlock(string name)
+        {
+            var ok = OnMain((sim, drone) =>
+            {
+                if (string.IsNullOrEmpty(name)) return false;
+                var unlock = TryGetUnlock(name);
+                return unlock != null && sim.farm.UnlockOrUpgrade(unlock, requireParent: false);
+            });
+            WaitOps(ok ? 200.0 : 1.0);
+            return ok;
+        }
+
+        public void set_execution_speed(double speed)
+        {
+            OnMain((sim, drone) =>
+            {
+                if (double.IsNaN(speed) || speed > sim.farm.MaxSpeedFactor() || speed < 0.1)
+                    sim.ChangeExecutionSpeed(sim.farm.MaxSpeedFactor());
+                else
+                    sim.ChangeExecutionSpeed(speed);
+                return true;
+            });
+            WaitOps(200.0);
+        }
+
+        public void set_world_size(int size)
+        {
+            OnMain((sim, drone) =>
+            {
+                if (size != sim.farm.grid.WorldSize.y)
+                {
+                    foreach (var d in sim.farm.drones) d?.ResetPos();
+                    sim.farm.grid.SizeLimit = size;
+                }
+                return true;
+            });
+            WaitOps(200.0);
+        }
+
+        public void do_a_flip()
+        {
+            OnMain((sim, drone) =>
+            {
+                drone.DoAFlip();
+                return true;
+            });
+            WaitOps(FlipOps());
+        }
+
+        public void pet_the_piggy()
+        {
+            OnMain((sim, drone) =>
+            {
+                drone.PetThePiggy();
+                return true;
+            });
+            WaitOps(FlipOps());
+        }
+
+        private double FlipOps() => Math.Floor(1.0 / (Sim?.OpDuration.Seconds ?? 0.0025));
+
+        public void change_hat(string name)
+        {
+            OnMain((sim, drone) =>
+            {
+                if (string.IsNullOrEmpty(name)) return false;
+                var hat = TryGetHat(name);
+                if (hat == null) return false;
+                drone.ChangeHat(hat, NewProgramState());
+                return true;
+            });
+            WaitOps(200.0);
+        }
+
         // ---- print (io.println) ----
 
         public void Print(string text)
@@ -178,7 +356,11 @@ namespace GleamFarmer
                 drone.PrintToAir(text);
                 return true;
             });
-            WaitOps(Math.Floor(1.0 / (Sim?.OpDuration.Seconds ?? 0.0025)));
+            WaitOps(FlipOps());
         }
+
+        // ---- quick_print (free print, no pacing) ----
+
+        public void quick_print(string text) => _log.Log(text);
     }
 }

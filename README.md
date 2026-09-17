@@ -19,14 +19,14 @@ Gleam source (in-game editor)
 - Actions (`game.move`, `game.harvest`, `game.plant`, `game.till`, `io.println`) block the
   worker for `ops × OpDuration` real seconds — the drone animates and the sim clock keeps
   running, so speed upgrades scale pacing.
-- Sensors (`get_pos_x`, `get_entity_type`, `num_items`, …) read state and return instantly.
+- Sensors (`get_pos`, `get_entity_type`, `num_items`, …) read state and return instantly.
 - Run/Execute toggles: press to start, press again to stop.
 
 ## Modules
 
 ```gleam
-import game          // move, harvest, plant, till, get_* sensors, custom types
-import game/item     // item.num_items, item.use_item
+import game            // movement, farming, sensors, utilities, custom types
+import game/item       // item.num_items, item.use_item, item.use_items
 ```
 
 ```gleam
@@ -34,7 +34,27 @@ game.till()
 game.plant(game.Carrot)
 game.move(game.North)
 game.item.num_items(game.item.Hay)
+let pos = game.get_pos()          // game.Position(x, y)
+game.swap(game.East)              // move the tile's entity to the adjacent tile
+game.clear()                      // wipe the farm
+game.measure()                    // growth progress of the current tile
+game.get_cost(game.Carrot)        // seed cost as items
+game.unlock(game.Carrot)          // spend resources to unlock an entity
+game.unlock_by_name("multi_trade")
+game.set_world_size(4)
+game.do_a_flip()
 ```
+
+Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
+`game.Companion` (from `get_companion`), `game.item.Item`.
+
+Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
+`plant`, `till`, `swap`, `clear`, `use_item`, `unlock`, `unlock_item`,
+`set_execution_speed`, `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`,
+`quick_print` (free). Sensors (instant): `get_pos`, `get_world_size`,
+`get_entity_type`, `get_ground_type`, `get_water`, `measure`, `measure_at`,
+`get_companion`, `get_cost`, `num_items`, `num_unlocked`, `num_unlocked_item`,
+`num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`.
 
 ## Development
 
@@ -84,4 +104,5 @@ floating print bubbles above the drone.
 - M0–M3: interpreter pipeline replaced; plugin runs Gleam in-game; highlighting; external
   `.gleam`/`.py` hot-reload; headless CLI.
 - M4: paced `game` FFI — movement + planting verified in-game; sensors built on the same
-  mapping. See `gleamfarmer.plan.md` for the checklist.
+  mapping. M4-3 adds the full utility builtin set (swap, clear, measure, costs, unlock,
+  drones, cosmetics) with 9/9 headless tests. See `gleamfarmer.plan.md` for the checklist.

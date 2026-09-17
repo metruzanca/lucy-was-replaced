@@ -1,7 +1,7 @@
 import game
 import game/item
-import gleam/io
 import gleam/int
+import gleam/io
 import gleam/option.{None, Some}
 
 pub fn main() {
