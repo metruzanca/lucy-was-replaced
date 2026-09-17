@@ -112,6 +112,23 @@ Known divergences (documented, deliberate):
   Harmony patch on `Simulation.RunNextStep`'s idle branch — deferred.
 - Jint `LimitRecursion(4096)` still rejects very deep non-tail recursion (the game has no limit).
 
+### M7 — Official leaderboards disabled ✅ COMPLETE
+The game author requires all mods to disable the official (Steam) leaderboards, so modded
+executions can't pollute them. `SteamLeaderboard.LoadLeaderboard` (Utils.dll) is the single
+choke point every leaderboard interaction flows through (score upload + entry download), so
+it's no-op'd with a Harmony prefix (`src/Plugin/Patches/LeaderboardDisablePatch.cs`). The
+in-game leaderboard screen still opens; it just shows no data and submits nothing.
+- [x] Harmony prefix on `SteamLeaderboard.LoadLeaderboard` → `__result = null`, skip original
+- [x] Plugin builds clean (0 warnings/errors)
+- [ ] In-game validation: leaderboard run finishes locally, nothing reaches Steam
+
+### M7 — Custom Gleam leaderboard server (future)
+Pledged in the plan (not implemented): if we want ranked play, host our own leaderboard
+server (Gleam!) and route scores there instead of Steam. The `LeaderboardDisablePatch` keeps
+official boards off; a future FFI (`game.leaderboard_*`) + a small Gleam HTTP server would
+give the same challenge runs with a Gleam-native leaderboard. Untracked for now; the M4
+deferred `leaderboard_run`/`simulate`/`tap` builtins could feed it.
+
 ---
 
 ## Decisions (locked)
