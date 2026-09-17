@@ -106,8 +106,14 @@ namespace GleamFarmer
                 if (string.IsNullOrWhiteSpace(source))
                     return true;
 
-                Log.LogInfo("GleamFarmer: compiling…");
-                var compiled = _runner.Compile(source);
+                // Every other code window is an importable Gleam module, just like the
+                // game's own Python. The window being run is the entry module.
+                var userModules = CollectUserModules(window, out var entryName);
+                var moduleNames = new List<string> { entryName };
+                moduleNames.AddRange(userModules.Select(m => m.Item1));
+                Log.LogInfo($"GleamFarmer: compiling… modules: {string.Join(", ", moduleNames)}");
+
+                var compiled = _runner.Compile(source, entryName, userModules);
 
                 var sink = new PluginSink(Log);
                 var run = new PacedGleamRun(compiled, _dispatcher, sink);
@@ -197,6 +203,41 @@ namespace GleamFarmer
             if (input == null) return string.Empty;
             var property = input.GetType().GetProperty("text");
             return property?.GetValue(input) as string ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Collect the other open code windows as importable Gleam modules. The window being
+        /// run becomes the entry module (by its own name when that is a valid Gleam module
+        /// name, else "main"); windows whose names are not valid Gleam module names or would
+        /// shadow the mod's own modules (e.g. "game") are left out.
+        /// </summary>
+        private static List<(string Name, string Code)> CollectUserModules(
+            CodeWindow active, out string entryModuleName)
+        {
+            var modules = new List<(string, string)>();
+            entryModuleName = "main";
+
+            var workspace = MainSim.Inst?.workspace;
+            if (workspace?.codeWindows == null) return modules;
+
+            var activeName = "main";
+            foreach (var pair in workspace.codeWindows)
+            {
+                if (ReferenceEquals(pair.Value, active)) { activeName = pair.Key; break; }
+            }
+            if (GleamModuleNames.IsValidModuleName(activeName)) entryModuleName = activeName;
+
+            foreach (var pair in workspace.codeWindows)
+            {
+                if (ReferenceEquals(pair.Value, active)) continue;
+                var name = pair.Key;
+                if (!GleamModuleNames.IsValidModuleName(name) || GleamModuleNames.IsReservedName(name))
+                    continue;
+                var text = GetCodeText(pair.Value);
+                if (string.IsNullOrWhiteSpace(text)) continue;
+                modules.Add((name, text));
+            }
+            return modules;
         }
 
         private static int LineColumnToOffset(string text, int line, int column)

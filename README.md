@@ -19,6 +19,9 @@ Gleam source (in-game editor)
 - Actions (`game.move`, `game.harvest`, `game.plant`, `game.till`, `io.println`) block the
   worker for `ops × OpDuration` real seconds — the drone animates and the sim clock keeps
   running, so speed upgrades scale pacing.
+- **Multiple modules**: every open code window is an importable Gleam module — create a
+  `utils` window and `import utils` from another window (helpers you call across modules need
+  `pub fn`). The window you run is the entry point.
 - **Full tick model**: pure Gleam computation is op-accounted too. Jint's debugger fires per
   executed statement; each statement's AST is weighted against the game's tick rules
   (binary op = 1, if branch = 1, loop start = 1, index = 1; calls/reads free), then all ops

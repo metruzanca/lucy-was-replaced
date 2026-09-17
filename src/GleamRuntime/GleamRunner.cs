@@ -13,7 +13,6 @@ namespace GleamRuntime
     public sealed class GleamRunner : IDisposable
     {
         private const string EntryModule = "__entry";
-        private const string EntrySource = "import { main } from \"./main.mjs\";\nmain();\n";
 
         private readonly GleamCompiler _compiler;
         private readonly IReadOnlyList<(string Name, string Code)> _stdlibModules;
@@ -22,7 +21,7 @@ namespace GleamRuntime
 
         /// <param name="stdlibModules">gleam_stdlib module (name, source) pairs.</param>
         /// <param name="runtimeFiles">JS runtime files keyed by module name: "gleam" (prelude), "gleam_stdlib", "dict", plus any FFI externals.</param>
-        /// <param name="extraModules">Additional Gleam modules to write into every project (e.g. the "tfwr" FFI module).</param>
+        /// <param name="extraModules">Additional Gleam modules to write into every project (e.g. the "game" FFI module).</param>
         public GleamRunner(
             byte[] wasmBytes,
             IReadOnlyList<(string Name, string Code)> stdlibModules,
@@ -35,9 +34,17 @@ namespace GleamRuntime
             _extraModules = extraModules ?? Array.Empty<(string, string)>();
         }
 
-        /// <summary>Compile a Gleam program (must define a public `main`).</summary>
+        /// <summary>
+        /// Compile a Gleam program (the entry module must define a public `main`).
+        /// </summary>
+        /// <param name="source">The entry module's source.</param>
+        /// <param name="entryModuleName">Module name for the entry source (default "main").</param>
+        /// <param name="userModules">Other user modules (e.g. the game's extra code windows) to make importable.</param>
         /// <exception cref="GleamCompileException">The program failed to compile.</exception>
-        public CompiledGleam Compile(string source)
+        public CompiledGleam Compile(
+            string source,
+            string entryModuleName = "main",
+            IEnumerable<(string Name, string Code)>? userModules = null)
         {
             var project = _compiler.NewProject();
             try
@@ -46,8 +53,11 @@ namespace GleamRuntime
                     project.WriteModule(name, code);
                 foreach (var (name, code) in _extraModules)
                     project.WriteModule(name, code);
+                if (userModules != null)
+                    foreach (var (name, code) in userModules)
+                        project.WriteModule(name, code);
 
-                project.WriteModule("main", source);
+                project.WriteModule(entryModuleName, source);
                 project.CompilePackage("javascript");
 
                 var sources = _runtimeFiles.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -62,13 +72,22 @@ namespace GleamRuntime
                     var js = project.ReadCompiledJavascript(name);
                     if (js != null) sources[name] = js;
                 }
+                if (userModules != null)
+                {
+                    foreach (var (name, _) in userModules)
+                    {
+                        var js = project.ReadCompiledJavascript(name);
+                        if (js != null) sources[name] = js;
+                    }
+                }
 
-                var mainJs = project.ReadCompiledJavascript("main");
-                if (mainJs == null)
-                    throw new GleamCompileException("The compiler produced no output for the main module.");
+                var entryJs = project.ReadCompiledJavascript(entryModuleName);
+                if (entryJs == null)
+                    throw new GleamCompileException(
+                        $"The compiler produced no output for the entry module '{entryModuleName}'.");
 
-                sources["main"] = mainJs;
-                sources[EntryModule] = EntrySource;
+                sources[entryModuleName] = entryJs;
+                sources[EntryModule] = EntrySource(entryModuleName);
 
                 return new CompiledGleam(sources);
             }
@@ -77,6 +96,9 @@ namespace GleamRuntime
                 project.Dispose();
             }
         }
+
+        private static string EntrySource(string entryModuleName) =>
+            $"import {{ main }} from \"./{entryModuleName}.mjs\";\nmain();\n";
 
         public void Dispose() => _compiler.Dispose();
     }
