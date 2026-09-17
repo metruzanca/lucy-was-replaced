@@ -61,6 +61,14 @@ Decisions: paced worker-thread execution (blocking FFI, ~ops*OpDuration waits); 
 - [x] In-game verification ✅: movement paced, planting works, sensors correct (`ground: soil`, `entity: Carrot OK`, `carrots: 3104334863`); fixed int32 overflow + ResourceManager lazy-load race
 - [x] Examples (`hello`, `farm`, `walk`, `verify`) + README + docs
 
+### M6 — FP-first progression (in progress)
+Language/tooling unlocks auto-granted + hidden from the research tree in Gleam mode; Gleam curriculum mapped onto world stages.
+- [x] `docs/progression.md` — vanilla progression (reference) + suggested Gleam-first re-scoping
+- [x] `docs/curriculum.md` — stage-by-stage Gleam course; `examples/stage0…7.gleam` (all compile headless)
+- [x] `ProgressionPatches`: `AutoGrantUnlocksPatch` (SetupSim postfix) + `ResearchTreePatch` (Setup prefix: hide language nodes, self-heals) — data-driven via `Farm.allKeyWords`
+- [ ] In-game verify: research tree shows world-only, no "unlock loops" flash, functions/recursion run from a fresh save, Python mode unaffected (check the parent-orphan log)
+- [ ] Optional: re-purpose a few language nodes as visible Gleam concept nodes (in-tree curriculum) once the tree layout is confirmed safe
+
 Fast-iteration tooling:
 - `scripts/run-gleam.sh <file.gleam>` — headless compile+run (same runtime as the plugin)
 - `scripts/push-to-game-save.sh <file.gleam> [save]` — hot-reload a snippet into the game's editor via the file watcher

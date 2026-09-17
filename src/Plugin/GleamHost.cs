@@ -19,6 +19,9 @@ namespace GleamFarmer
     {
         public static GleamHost? Instance { get; private set; }
 
+        /// <summary>The plugin's BepInEx log source (for other patches).</summary>
+        internal static ManualLogSource LogSource => Log;
+
         private static ManualLogSource Log = null!;
 
         private readonly GleamRunner _runner;
