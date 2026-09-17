@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Jint;
 using Jint.Native;
+using Jint.Runtime.Debugger;
 using Jint.Runtime.Modules;
 
 namespace GleamRuntime
@@ -25,7 +26,8 @@ namespace GleamRuntime
             TimeSpan? timeout = null,
             IGameBridge? bridge = null,
             IGleamPrintHandler? print = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default,
+            TickEngine? ticks = null)
         {
             var loader = new GleamModuleLoader(moduleSources);
             _engine = new Engine(options =>
@@ -34,9 +36,24 @@ namespace GleamRuntime
                 options.TimeoutInterval(timeout ?? TimeSpan.FromSeconds(5));
                 options.LimitRecursion(4096);
                 options.CancellationToken(cancellationToken);
+                if (ticks != null)
+                {
+                    // The debugger's Step event fires once per executed statement and
+                    // exposes the AST node, which the tick engine converts to op cost.
+                    options.Debugger.Enabled = true;
+                    options.Debugger.InitialStepMode = StepMode.Into;
+                }
             });
             _engine.SetValue("console", new ConsoleBridge(sink, print));
             _engine.SetValue("__gleam_host", bridge ?? (object)new StubGameBridge());
+            if (ticks != null)
+            {
+                _engine.Debugger.Step += (_, e) =>
+                {
+                    ticks.OnStep(e.CurrentNode);
+                    return StepMode.Into;
+                };
+            }
         }
 
         /// <summary>Execute the package: import the entry wrapper, which calls main().</summary>

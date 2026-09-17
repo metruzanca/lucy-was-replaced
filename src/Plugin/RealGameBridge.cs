@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using GleamRuntime;
 
 namespace GleamFarmer
@@ -11,7 +9,9 @@ namespace GleamFarmer
     /// Bridges Gleam's `game` module to the real game. Actions are dispatched to
     /// the Unity main thread (world/state mutations) and then pace the worker for
     /// `ops * OpDuration` real seconds — the same op-accounted timing the game's
-    /// own interpreter uses. Sensors read state and return immediately.
+    /// own interpreter uses. All ops (actions and pure computation) feed the
+    /// shared <see cref="TickEngine"/> counter and drain power like the game.
+    /// Sensors read state and return immediately.
     /// </summary>
     public sealed class RealGameBridge : IGameBridge, IGleamPrintHandler
     {
@@ -23,16 +23,21 @@ namespace GleamFarmer
             { "", "hay", "wood", "carrot", "pumpkin", "power", "gold", "bone", "water", "fertilizer" };
 
         private readonly MainThreadDispatcher _dispatcher;
-        private readonly IGleamRunController _run;
         private readonly IGleamLogSink _log;
+        private readonly TickEngine _ticks;
         private readonly Random _random = new();
-        private long _totalOps;
+        private double _opDuration = 0.0025;
 
-        public RealGameBridge(MainThreadDispatcher dispatcher, IGleamRunController run, IGleamLogSink log)
+        public RealGameBridge(
+            MainThreadDispatcher dispatcher,
+            IGleamRunController run,
+            IGleamLogSink log,
+            TickEngine ticks)
         {
             _dispatcher = dispatcher;
-            _run = run;
             _log = log;
+            _ticks = ticks;
+            _ticks.Pacer.OnBatch = FlushPower;
         }
 
         private static Simulation? Sim => MainSim.Inst?.sim;
@@ -76,19 +81,24 @@ namespace GleamFarmer
         private void WaitOps(double ops)
         {
             if (ops <= 0) return;
-            Interlocked.Add(ref _totalOps, (long)ops);
-
             var sim = Sim;
-            if (sim == null) return;
-            var milliseconds = (int)(ops * sim.OpDuration.Seconds * 1000);
-            if (milliseconds <= 0) return;
+            if (sim != null) _opDuration = sim.OpDuration.Seconds;
+            _ticks.Pacer.OpDurationSeconds = _opDuration;
+            _ticks.Pacer.Account((long)ops);
+        }
 
-            var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.ElapsedMilliseconds < milliseconds)
+        /// <summary>
+        /// Drain the game's power resource for consumed ops, mirroring
+        /// Execution.Execute's `UsedPower += ops / 200 / 30`.
+        /// </summary>
+        private void FlushPower(long ops)
+        {
+            _dispatcher.Invoke(() =>
             {
-                if (_run.IsStopped) throw new GleamStoppedException();
-                Thread.Sleep(Math.Min(50, milliseconds - (int)stopwatch.ElapsedMilliseconds));
-            }
+                var sim = Sim;
+                if (sim?.farm != null) sim.farm.UsedPower += ops / 200.0 / 30.0;
+                return true;
+            });
         }
 
         // ---- actions (paced) ----
@@ -207,8 +217,8 @@ namespace GleamFarmer
             });
         }
 
-        public double get_time() => OnMain((sim, drone) => sim.CurrentTime.Seconds);
-        public long get_tick_count() => Interlocked.Read(ref _totalOps);
+        public double get_time() => _ticks.Ops.TotalOps * _opDuration;
+        public long get_tick_count() => _ticks.Ops.TotalOps;
 
         // ---- utility sensors (instant) ----
 

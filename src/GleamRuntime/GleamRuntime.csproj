@@ -11,6 +11,7 @@
   <ItemGroup>
     <PackageReference Include="Wasmtime" Version="44.0.0" />
     <PackageReference Include="Jint" Version="4.16.2" />
+    <PackageReference Include="Acornima" Version="1.7.0" />
   </ItemGroup>
 
 </Project>

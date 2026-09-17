@@ -19,8 +19,14 @@ Gleam source (in-game editor)
 - Actions (`game.move`, `game.harvest`, `game.plant`, `game.till`, `io.println`) block the
   worker for `ops × OpDuration` real seconds — the drone animates and the sim clock keeps
   running, so speed upgrades scale pacing.
+- **Full tick model**: pure Gleam computation is op-accounted too. Jint's debugger fires per
+  executed statement; each statement's AST is weighted against the game's tick rules
+  (binary op = 1, if branch = 1, loop start = 1, index = 1; calls/reads free), then all ops
+  (computation + actions) are paced to the tick rate and fed to `get_tick_count`. Power
+  drains like the game's interpreter (`UsedPower += ops/200/30`).
 - Sensors (`get_pos`, `get_entity_type`, `num_items`, …) read state and return instantly.
-- Run/Execute toggles: press to start, press again to stop.
+- `get_time()` returns op-accounted execution time (`ops × OpDuration`); the world clock is
+  unchanged. Run/Execute toggles: press to start, press again to stop.
 
 ## Modules
 

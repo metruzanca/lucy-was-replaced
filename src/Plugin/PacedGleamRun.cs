@@ -54,14 +54,20 @@ namespace GleamFarmer
                 // No wall-clock timeout: pacing waits accumulate real time. The
                 // cancellation token handles Stop (including tight JS loops); the
                 // recursion limit catches runaway recursion.
-                var bridge = new RealGameBridge(_dispatcher, this, _log);
+                var ticks = new TickEngine(this);
+                var bridge = new RealGameBridge(_dispatcher, this, _log, ticks);
                 using var js = new JsRuntime(
-                    _compiled.Sources, _log, TimeSpan.FromHours(12), bridge, bridge, _cancellation.Token);
+                    _compiled.Sources, _log, TimeSpan.FromHours(12), bridge, bridge,
+                    _cancellation.Token, ticks);
                 js.RunMain();
             }
             catch (GleamStoppedException)
             {
                 // expected: player pressed stop
+            }
+            catch (Jint.Runtime.ExecutionCanceledException)
+            {
+                // expected: player pressed stop during a JS compute burst
             }
             catch (Exception ex)
             {

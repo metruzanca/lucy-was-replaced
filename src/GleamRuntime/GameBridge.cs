@@ -60,15 +60,25 @@ namespace GleamRuntime
         /// <summary>Override for `get_companion` (null by default → None).</summary>
         public int[]? CompanionResult { get; set; }
 
-        public bool move(int direction) { Record($"move({direction})"); return true; }
+        /// <summary>
+        /// When set, action calls account their standard op cost into this
+        /// accumulator (mirrors the real bridge's pacing budget), so tick-engine
+        /// tests can verify computation + action op merging.
+        /// </summary>
+        public OpAccumulator? Ops { get; set; }
+
+        private const double ActionCost = 200.0;
+        private const double FlipCost = 400.0;
+
+        public bool move(int direction) { Record($"move({direction})"); AddOps(ActionCost); return true; }
         public bool can_move(int direction) { Record($"can_move({direction})"); return true; }
-        public bool harvest() { Record("harvest()"); return true; }
+        public bool harvest() { Record("harvest()"); AddOps(ActionCost); return true; }
         public bool can_harvest() { Record("can_harvest()"); return true; }
-        public bool plant(int entity) { Record($"plant({entity})"); return true; }
-        public void till() { Record("till()"); }
-        public bool swap(int direction) { Record($"swap({direction})"); return true; }
-        public void clear() { Record("clear()"); }
-        public bool use_item(int item, int count) { Record($"use_item({item}, {count})"); return true; }
+        public bool plant(int entity) { Record($"plant({entity})"); AddOps(ActionCost); return true; }
+        public void till() { Record("till()"); AddOps(ActionCost); }
+        public bool swap(int direction) { Record($"swap({direction})"); AddOps(ActionCost); return true; }
+        public void clear() { Record("clear()"); AddOps(ActionCost); }
+        public bool use_item(int item, int count) { Record($"use_item({item}, {count})"); AddOps(ActionCost); return true; }
         public int get_pos_x() { Record("get_pos_x()"); return 0; }
         public int get_pos_y() { Record("get_pos_y()"); return 0; }
         public int get_world_size() { Record("get_world_size()"); return 3; }
@@ -77,7 +87,7 @@ namespace GleamRuntime
         public double get_water() { Record("get_water()"); return 0.0; }
         public long num_items(int item) { Record($"num_items({item})"); return 0; }
         public double get_time() { Record("get_time()"); return 0.0; }
-        public long get_tick_count() { Record("get_tick_count()"); return 0; }
+        public long get_tick_count() { Record("get_tick_count()"); return Ops?.TotalOps ?? 0; }
 
         // ---- utilities (canned, deterministic) ----
         public double? measure() { Record("measure()"); return 1.5; }
@@ -87,15 +97,20 @@ namespace GleamRuntime
         public double random() { Record("random()"); return 0.5; }
         public int num_drones() { Record("num_drones()"); return 1; }
         public int max_drones() { Record("max_drones()"); return 4; }
-        public bool unlock(string name) { Record($"unlock({name})"); return true; }
+        public bool unlock(string name) { Record($"unlock({name})"); AddOps(ActionCost); return true; }
         public int num_unlocked(string name) { Record($"num_unlocked({name})"); return 2; }
-        public void set_execution_speed(double speed) { Record($"set_execution_speed({speed})"); }
-        public void set_world_size(int size) { Record($"set_world_size({size})"); }
-        public void do_a_flip() { Record("do_a_flip()"); }
-        public void pet_the_piggy() { Record("pet_the_piggy()"); }
-        public void change_hat(string name) { Record($"change_hat({name})"); }
+        public void set_execution_speed(double speed) { Record($"set_execution_speed({speed})"); AddOps(ActionCost); }
+        public void set_world_size(int size) { Record($"set_world_size({size})"); AddOps(ActionCost); }
+        public void do_a_flip() { Record("do_a_flip()"); AddOps(FlipCost); }
+        public void pet_the_piggy() { Record("pet_the_piggy()"); AddOps(FlipCost); }
+        public void change_hat(string name) { Record($"change_hat({name})"); AddOps(ActionCost); }
         public void quick_print(string text) { Record($"quick_print({text})"); }
 
         private void Record(string call) => Calls.Add(call);
+
+        private void AddOps(double ops)
+        {
+            if (Ops != null && ops > 0) Ops.Add((long)ops);
+        }
     }
 }

@@ -92,9 +92,13 @@ namespace GleamRuntime
         public IReadOnlyDictionary<string, string> Sources => _sources;
 
         /// <summary>Execute the package (imports the entry wrapper, which calls main()).</summary>
-        public GleamRunResult Run(IGleamLogSink? sink = null, TimeSpan? timeout = null, IGameBridge? bridge = null)
+        public GleamRunResult Run(
+            IGleamLogSink? sink = null,
+            TimeSpan? timeout = null,
+            IGameBridge? bridge = null,
+            TickEngine? ticks = null)
         {
-            using var js = new JsRuntime(_sources, sink, timeout, bridge);
+            using var js = new JsRuntime(_sources, sink, timeout, bridge, cancellationToken: default, ticks: ticks);
             try
             {
                 js.RunMain();

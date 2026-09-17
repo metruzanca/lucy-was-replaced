@@ -93,6 +93,27 @@ Fast-iteration tooling:
 
 ---
 
+### M6 — Full tick-engine parity (op-accounted timing) ✅ COMPLETE
+Decisions: count *all* ops (pure computation + actions) via Jint's debugger `Step` event,
+weight each executed statement against the game's tick rules by walking its Acornima AST
+once (cached per node), pace to `ops × OpDuration` like the interpreter's ≤199-op steps.
+- [x] `TickEngine` (`OpAccumulator` + `OpWeights` AST cache + `TickPacer`): computation ticks merge with action ops into one counter
+- [x] `OpWeights` calibration (probed Jint 4.16.2 step granularity): loop tests step separately, if-conditions fold into the IfStatement, per-call steps report `null` (free), Gleam closures compile to block bodies (stepped normally)
+- [x] `JsRuntime` enables `Debugger.Enabled` + `StepMode.Into` when a `TickEngine` is supplied; `CompiledGleam.Run` threads it through
+- [x] `RealGameBridge` routes `WaitOps` through the pacer, `get_tick_count` = merged ops, `get_time` = op-accounted (`ops × OpDuration`), power drain flushed to main thread (`UsedPower += ops/200/30`, mirrors Execution.cs:192)
+- [x] `StubGameBridge` accounts standard action costs when wired to an accumulator (headless merge tests)
+- [x] Tests (7): straight-line arithmetic, TCO loop iteration cost, non-tail recursion, action-op merge, `get_tick_count` value, real-time pacing, disabled-pacing speed
+- [x] Fixed a `Stopwatch` landmine: `Elapsed.Ticks` advances at 100 ns (10 MHz) while `Frequency` reports 1 GHz on this runtime — the pacer now uses the consistent `GetTimestamp()`/`Frequency` pair
+- [ ] In-game validation: verify a compute-heavy Gleam run paces at the selected execution speed and drains power
+
+Known divergences (documented, deliberate):
+- World/crop time tracks wall clock (the sim loop overwrites `sim.CurrentTime` when idle);
+  `get_time()` is op-accounted from the run's own ops. Op-accounting world time would need a
+  Harmony patch on `Simulation.RunNextStep`'s idle branch — deferred.
+- Jint `LimitRecursion(4096)` still rejects very deep non-tail recursion (the game has no limit).
+
+---
+
 ## Decisions (locked)
 
 1. **Architecture B** — run the *real* Gleam compiler via WASM (playground approach), not a hand-written Gleam parser. Full Gleam from day one.
