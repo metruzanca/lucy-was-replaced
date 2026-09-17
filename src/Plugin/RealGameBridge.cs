@@ -45,15 +45,29 @@ namespace GleamFarmer
 
         private static Simulation? Sim => MainSim.Inst?.sim;
 
-        private T OnMain<T>(Func<Simulation, Drone, T> fn) => _dispatcher.Invoke(() =>
+        private T OnMain<T>(Func<Simulation, Drone, T> fn)
         {
-            var sim = Sim;
-            if (sim?.farm?.drones is not { Count: > 0 }
-                || _droneId >= sim.farm.drones.Count
-                || sim.farm.drones[_droneId] == null)
-                throw new InvalidOperationException("This drone is no longer active.");
-            return fn(sim, sim.farm.drones[_droneId]);
-        });
+            try
+            {
+                return _dispatcher.Invoke(() =>
+                {
+                    var sim = Sim;
+                    if (sim?.farm?.drones is not { Count: > 0 }
+                        || _droneId >= sim.farm.drones.Count
+                        || sim.farm.drones[_droneId] == null)
+                        throw new InvalidOperationException("This drone is no longer active.");
+                    return fn(sim, sim.farm.drones[_droneId]);
+                });
+            }
+            catch (Exception ex)
+            {
+                // The dispatcher surfaces main-thread failures as an AggregateException;
+                // log the full chain (incl. the real stack) so an opaque game-state NRE
+                // is diagnosable from the BepInEx log.
+                _log.Error($"game call failed (drone {_droneId}):\n{ex}");
+                throw;
+            }
+        }
 
         private static ProgramState NewProgramState() => new(0, new Random(), 0);
 
@@ -137,7 +151,12 @@ namespace GleamFarmer
             {
                 if (string.IsNullOrEmpty(name)) return false;
                 var farmObject = TryGetFarmObject(name);
-                return farmObject != null && drone.Plant(farmObject, NewProgramState());
+                // ResourceManager can hand back a half-populated SO during the game-start
+                // lazy-load race; the game's Plant() would then NullReference. Treat a
+                // not-yet-ready SO as a plain miss (the player re-runs / next call retries).
+                if (farmObject == null || farmObject.placeableOn == null || farmObject.cost == null)
+                    return false;
+                return drone.Plant(farmObject, NewProgramState());
             });
             WaitOps(ok ? 200.0 : 1.0);
             return ok;
@@ -264,7 +283,8 @@ namespace GleamFarmer
             {
                 if (string.IsNullOrEmpty(name)) return Array.Empty<int>();
                 var farmObject = TryGetFarmObject(name);
-                if (farmObject == null) return Array.Empty<int>();
+                // Half-loaded SO during the lazy-load race: treat as "no cost yet".
+                if (farmObject?.cost == null) return Array.Empty<int>();
 
                 var cost = farmObject.cost;
                 var factor = 1;

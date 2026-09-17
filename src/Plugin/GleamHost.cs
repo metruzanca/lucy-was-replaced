@@ -145,10 +145,13 @@ namespace GleamFarmer
 
             if (error != null)
             {
-                Log.LogError($"GleamFarmer: runtime error: {error.Message}");
+                // The main-thread dispatcher wraps game-side failures in an AggregateException;
+                // unwrap to the real error so the player sees the actual cause, not the wrapper.
+                var real = Unwrap(error);
+                Log.LogError($"GleamFarmer: runtime error: {real}");
                 _dispatcher.Invoke(() =>
                 {
-                    ShowError(window, error.Message);
+                    ShowError(window, real.ToString());
                     return true;
                 });
             }
@@ -161,6 +164,13 @@ namespace GleamFarmer
                     return true;
                 });
             }
+        }
+
+        private static Exception Unwrap(Exception ex)
+        {
+            while (ex is AggregateException aggregate && aggregate.InnerExceptions.Count == 1)
+                ex = aggregate.InnerExceptions[0];
+            return ex;
         }
 
         private static void ShowError(CodeWindow window, string message)
