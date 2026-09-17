@@ -11,6 +11,15 @@ namespace GleamFarmer.Patches
     /// </summary>
     public static class ProgressionPatches
     {
+        // Python-only SYNTAX keywords. Used to detect language unlocks data-drivenly.
+        // (Farm.allKeyWords also contains constants like North/True/Entities, which
+        // world unlocks legitimately introduce - matching on those would hide crops.)
+        private static readonly HashSet<string> SyntaxKeywords = new()
+        {
+            "def", "while", "for", "if", "else", "elif", "and", "or", "not",
+            "break", "continue", "pass", "return", "global", "import", "from",
+        };
+
         private static readonly HashSet<string> LanguageOrToolingNames = new()
         {
             // Language / syntax unlocks (Python-oriented; Gleam equivalents always work).
@@ -27,7 +36,7 @@ namespace GleamFarmer.Patches
 
         /// <summary>
         /// Language/tooling UnlockSOs: curated names plus any unlock that directly
-        /// gates a language keyword (data-driven via <see cref="Farm.allKeyWords"/>).
+        /// gates a Python syntax keyword.
         /// </summary>
         internal static List<UnlockSO> GetLanguageUnlocks()
         {
@@ -35,7 +44,7 @@ namespace GleamFarmer.Patches
             foreach (var so in ResourceManager.GetAllUnlocks())
             {
                 var name = so.unlockName?.ToLowerInvariant() ?? string.Empty;
-                var gatesKeyword = so.unlocks != null && so.unlocks.Any(Farm.allKeyWords.Contains);
+                var gatesKeyword = so.unlocks != null && so.unlocks.Any(SyntaxKeywords.Contains);
                 if (LanguageOrToolingNames.Contains(name) || gatesKeyword)
                     result.Add(so);
             }
