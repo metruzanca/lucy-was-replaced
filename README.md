@@ -7,6 +7,31 @@ plugin compiles it with the actual Gleam compiler (embedded as WASM), runs the g
 JavaScript in an embedded engine, and bridges the farm API through a typed `game` module —
 paced like the game's own interpreter (each action costs ops and takes real time).
 
+## Installing
+
+The mod is a **BepInEx 5** plugin and depends on `BepInEx-BepInExPack-5.4.2305`.
+
+- **Recommended:** install with a mod manager (r2modman / Gale / Thunderstore Mod
+  Manager). It installs BepInEx automatically from the dependency, then installs
+  this mod. Launch the game through the manager and press **Run**.
+- **Manual:** extract the zip into the game folder (`BepInEx/plugins/GleamFarmer/`),
+  with BepInEx 5 x64 already installed next to `TheFarmerWasReplaced.exe`.
+
+Full steps for both (including Windows, Linux/Proton, and first program):
+[`docs/INSTALL.md`](docs/INSTALL.md).
+
+```gleam
+import game
+
+pub fn main() {
+  game.till()
+  game.plant(game.Carrot)
+  game.move(game.North)
+}
+```
+
+Press **Run** — the drone tills, plants, and moves, paced like the game's own scripts.
+
 ## How it works
 
 ```
@@ -117,15 +142,6 @@ Iteration:
 ```
 
 Releasing a new version: see [docs/RELEASE.md](docs/RELEASE.md).
-
-## In-game setup (Linux/Proton)
-
-1. Install BepInEx 5 (win_x64) into the game directory.
-2. Apply the Wine DLL override so the game loads BepInEx's winhttp proxy
-   (`./scripts/apply-proton-override.sh`, run once with the game closed).
-3. `dotnet build src/Plugin/GleamFarmer.csproj` stages the plugin into
-   `BepInEx/plugins/GleamFarmer/` (DLLs + embedded wasm/stdlib + native `wasmtime.dll`).
-4. Launch the game, open a save, press Run.
 
 Output and errors land in `BepInEx/LogOutput.log`; `io.println` also renders as the game's
 floating print bubbles above the drone.
