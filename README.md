@@ -1,24 +1,28 @@
 # Lucy was Replaced
 
-Replace *The Farmer Was Replaced*'s built-in Python subset with **Gleam**.
+<video src="assets/readme_demo.mp4" controls></video>
 
-Players write real Gleam in the game's editor (or an external `.gleam` file). A BepInEx
-plugin compiles it with the actual Gleam compiler (embedded as WASM), runs the generated
-JavaScript in an embedded engine, and bridges the farm API through a typed `game` module —
-paced like the game's own interpreter (each action costs ops and takes real time).
+Play *The Farmer Was Replaced* with **Gleam**, a real programming language, instead of
+the game's built-in Python.
 
-## Installing
+You type your farm code in the same editor you already know. The difference: your code is
+written in Gleam, a friendly language that catches mistakes before they happen. It runs
+right inside the game, paced exactly like the game's own scripts.
 
-The mod is a **BepInEx 5** plugin and depends on `BepInEx-BepInExPack-5.4.2305`.
+## Why Gleam?
 
-- **Recommended:** install with a mod manager (r2modman / Gale / Thunderstore Mod
-  Manager). It installs BepInEx automatically from the dependency, then installs
-  this mod. Launch the game through the manager and press **Run**.
-- **Manual:** extract the zip into the game folder (`BepInEx/plugins/GleamFarmer/`),
-  with BepInEx 5 x64 already installed next to `TheFarmerWasReplaced.exe`.
+- **Fewer surprises**: Gleam checks your code before it runs, so you catch mistakes early.
+- **Easy to read**: clean formatting and a simple, consistent structure.
+- **Beginner friendly**: if you can follow a recipe, you can write a Gleam program.
 
-Full steps for both (including Windows, Linux/Proton, and first program):
-[`docs/INSTALL.md`](docs/INSTALL.md).
+## What can you do with it?
+
+- **Automate your farm** just like with Python: move, till, plant, and harvest.
+- **Use the whole game toolkit**: sensors, items, unlocks, and the occasional flip.
+- **Run several drones at once** to work the farm faster.
+- **Split your code across windows** and reuse it like building blocks.
+
+## A first program
 
 ```gleam
 import game
@@ -30,135 +34,20 @@ pub fn main() {
 }
 ```
 
-Press **Run** — the drone tills, plants, and moves, paced like the game's own scripts.
+Press **Run**. Your drone tills the ground, plants a carrot, and moves on.
 
-## How it works
+## Installing
 
-```
-Gleam source (in-game editor)
-  → Gleam compiler (WASM, via Wasmtime) → JavaScript
-  → Jint (embedded JS engine) on a worker thread
-  → game_ffi.mjs → C# bridge → the game's Drone/Farm/GridManager (main thread, paced)
-```
+Two easy ways:
 
-- Actions (`game.move`, `game.harvest`, `game.plant`, `game.till`, `io.println`) block the
-  worker for `ops × OpDuration` real seconds — the drone animates and the sim clock keeps
-  running, so speed upgrades scale pacing.
-- **Multiple modules**: every open code window is an importable Gleam module — create a
-  `utils` window and `import utils` from another window (helpers you call across modules need
-  `pub fn`). The window you run is the entry point.
-- **Full tick model**: pure Gleam computation is op-accounted too. Jint's debugger fires per
-  executed statement; each statement's AST is weighted against the game's tick rules
-  (binary op = 1, if branch = 1, loop start = 1, index = 1; calls/reads free), then all ops
-  (computation + actions) are paced to the tick rate and fed to `get_tick_count`. Power
-  drains like the game's interpreter (`UsedPower += ops/200/30`).
-- Sensors (`get_pos`, `get_entity_type`, `num_items`, …) read state and return instantly.
-- `get_time()` returns op-accounted execution time (`ops × OpDuration`); the world clock is
-  unchanged. Run/Execute toggles: press to start, press again to stop.
+- **Mod manager (recommended)**: install r2modman or Gale, pick *The Farmer Was Replaced*,
+  and click *Install with Mod Manager*. BepInEx is set up for you automatically.
+- **By hand**: extract the zip into the game folder with BepInEx 5 installed. Detailed
+  steps are in [docs/INSTALL.md](docs/INSTALL.md) (also included in the package).
 
-## Modules
+## Learn more
 
-```gleam
-import game            // movement, farming, sensors, utilities, custom types
-import game/item       // item.num_items, item.use_item, item.use_items
-```
-
-```gleam
-game.till()
-game.plant(game.Carrot)
-game.move(game.North)
-game.item.num_items(game.item.Hay)
-let pos = game.get_pos()          // game.Position(x, y)
-game.swap(game.East)              // move the tile's entity to the adjacent tile
-game.clear()                      // wipe the farm
-game.measure()                    // growth progress of the current tile
-game.get_cost(game.Carrot)        // seed cost as items
-game.unlock(game.Carrot)          // spend resources to unlock an entity
-game.unlock_by_name("multi_trade")
-game.set_world_size(4)
-game.do_a_flip()
-```
-
-Multi-drone:
-
-```gleam
-import game
-
-pub fn main() {
-  let handles = game.spawn_drone(3, worker)   // worker must be a pub fn
-  case handles {
-    [a, b, c, ..] -> {
-      let _ = game.wait_for(a)
-      let _ = game.wait_for(b)
-      let _ = game.wait_for(c)
-    }
-    _ -> game.quick_print("no drones")
-  }
-}
-
-pub fn worker() -> Nil {
-  let me = game.get_drone_id()
-  // ... farm this drone's quadrant ...
-  Nil
-}
-```
-
-Drones run concurrently, each in its own engine/thread, sharing one tick budget and the
-world (actions serialize on the main thread). `game.send(message, drone_id)` /
-`game.receive()` coordinate via mailboxes; `game.has_finished(handle)` polls;
-`game.spawn_drone_with` lets a worker return a value for `game.wait_for`.
-
-Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
-`game.Companion` (from `get_companion`), `game.item.Item`, `game.DroneHandle`.
-
-Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
-`plant`, `till`, `swap`, `clear`, `use_item`, `unlock`, `unlock_item`,
-`set_execution_speed`, `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`,
-`quick_print` (free). Sensors (instant): `get_pos`, `get_world_size`,
-`get_entity_type`, `get_ground_type`, `get_water`, `measure`, `measure_at`,
-`get_companion`, `get_cost`, `num_items`, `num_unlocked`, `num_unlocked_item`,
-`num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`. Drones:
-`spawn_drone`, `spawn_drone_with`, `get_drone_id`, `wait_for`, `has_finished`, `send`,
-`receive`, `receive_from`.
-
-## Development
-
-Environment (NixOS-friendly dev shell):
-
-```sh
-nix-shell            # dotnet-sdk, gleam, node
-./scripts/fetch-game-assets.sh    # copies game DLLs → libs/ + downloads pinned wasm compiler
-./scripts/fetch-stdlib.sh         # gleam_stdlib + prelude → src/GleamRuntime/Embedded
-dotnet build GleamFarmer.sln
-dotnet test tests/GleamRuntime.Tests
-```
-
-Iteration:
-
-```sh
-./scripts/run-gleam.sh examples/hello.gleam       # compile+run headless (no game)
-./scripts/push-to-game-save.sh examples/verify.gleam gleam   # hot-reload into the game
-./scripts/copy-save-progression.sh Save0 Gleam    # grant a save another save's unlocks/items
-```
-
-Releasing a new version: see [docs/RELEASE.md](docs/RELEASE.md).
-
-Output and errors land in `BepInEx/LogOutput.log`; `io.println` also renders as the game's
-floating print bubbles above the drone.
-
-## Layout
-
-- `src/GleamRuntime/` — compiler WASM host (Wasmtime + wasm-bindgen glue), stdlib/prelude
-  bundling, Jint ESM host, `game` FFI bridge interfaces.
-- `src/Plugin/` — BepInEx plugin: Harmony patches (Run intercept, Python-parse skip, Gleam
-  syntax highlighting), paced worker execution, real game bridge.
-- `examples/` — runnable Gleam scripts.
-- `docs/` — research notes (game internals, wasm compiler ABI, runtime decision).
-
-## Status
-
-- M0–M3: interpreter pipeline replaced; plugin runs Gleam in-game; highlighting; external
-  `.gleam`/`.py` hot-reload; headless CLI.
-- M4: paced `game` FFI — movement + planting verified in-game; sensors built on the same
-  mapping. M4-3 adds the full utility builtin set (swap, clear, measure, costs, unlock,
-  drones, cosmetics) with 9/9 headless tests. See `gleamfarmer.plan.md` for the checklist.
+- Everything you can do with the game API: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- Full install guide: [docs/INSTALL.md](docs/INSTALL.md)
+- Report issues or contribute:
+  [github.com/metruzanca/lucy-was-replaced](https://github.com/metruzanca/lucy-was-replaced)
