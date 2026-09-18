@@ -1,6 +1,7 @@
 # Lucy was Replaced
 
-<video src="assets/readme_demo.mp4" controls></video>
+
+https://github.com/user-attachments/assets/f247f92b-9493-4e8b-a41b-d544b17fbb0f
 
 Play *The Farmer Was Replaced* with **Gleam**, a real programming language, instead of
 the game's built-in Python.
