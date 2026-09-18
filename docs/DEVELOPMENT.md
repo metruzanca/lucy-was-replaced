@@ -29,6 +29,12 @@ Gleam source (in-game editor)
 
 ## Game module reference
 
+The quick reference below. A full, per-function reference is also available **in-game**
+(Gleam mode): open the docs window — the builtins list shows `game.*`, and hovering any
+`game.X` / `game.item.Y` in the editor shows its Gleam doc. The bundled source of truth
+for that panel is `src/GleamRuntime/Embedded/docs/game-reference.md` (one `## ` section
+per function/constant; it renders on GitHub).
+
 ```gleam
 import game            // movement, farming, sensors, utilities, custom types
 import game/item       // item.num_items, item.use_item, item.use_items

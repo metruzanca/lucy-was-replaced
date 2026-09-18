@@ -201,6 +201,33 @@ Implementation notes (Option B):
 
 ---
 
+### M10 — In-game Gleam reference (docs panel, tooltips, autocomplete) ✅ COMPLETE
+The game's docs/info surfaces describe Python builtins (`plant(Entities.Carrot)`); in Gleam
+mode they now show the `game.*` library (`game.plant(game.Carrot)`).
+- Single source of truth: `src/GleamRuntime/Embedded/docs/game-reference.md` (one `## `
+  section per `game` function/constant + overview with Python→stdlib mapping). Split on
+  headings by `GleamRuntime.GleamDocs` into the game's doc page ids (`functions/*`,
+  `objects/*`, `items/*`, `game`).
+- Patches (Gleam-mode gated) swap the Python surfaces for the bundled reference:
+  `Localizer.Localize` postfix (`code_tooltip_*` pages + hover-tooltip text, overview via
+  `code_tooltip_game`, "Builtins" heading → "Game API"); `MarkdownText` TOC generators
+  (builtins/entities/grounds/items list `game.*`, same unlock gates + leading module
+  overview entry); `TooltipUtils.GetWordTooltip` prefix (`game.X` / `game.item.Y` → Gleam
+  tooltip with clickable docs link) + `FarmObjectTooltip`/`ItemTooltip` postfixes
+  (`objects/*`/`items/*` pages); `CodeWindow.GetWordList` (offer `game`, drop bare Python
+  builtins) + `GetSubWordList` (`game.` / `game.item.` autocomplete).
+- Out of scope: `__builtins__.py` save stub (external Python editors), `docs/scripting/*`
+  (Python syntax guides), docs search box, non-English languages.
+- [x] Content authored + loaded at startup (`GleamHost.Init`)
+- [x] Docs-window TOC + per-function/entity/item pages show `game.*`
+- [x] Hover tooltips for `game.X` / `game.item.Y`
+- [x] `game.` / `game.item.` autocomplete
+- [x] Tests (9): every `pub fn` in `game.gleam`/`item.gleam` has a page, TOC links resolve,
+      signatures present, overview maps Python builtins, dotted lookups + autocomplete
+- [ ] In-game validation: docs window, hover, autocomplete all read as `game.*`
+
+---
+
 ## Decisions (locked)
 
 1. **Architecture B** — run the *real* Gleam compiler via WASM (playground approach), not a hand-written Gleam parser. Full Gleam from day one.

@@ -77,6 +77,17 @@ namespace GleamFarmer
                 };
                 var extraModules = GleamStdlib.LoadGameModules(embedded);
 
+                var docsPath = Path.Combine(embedded, "docs", "game-reference.md");
+                if (File.Exists(docsPath))
+                {
+                    GleamDocs.Parse(File.ReadAllText(docsPath));
+                    Log.LogInfo($"GleamFarmer: in-game reference loaded ({GleamDocs.Builtins().Count} game functions).");
+                }
+                else
+                {
+                    Log.LogWarning($"GleamFarmer: missing in-game reference: {docsPath}");
+                }
+
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);
                 Log.LogInfo($"GleamFarmer runtime ready ({stdlib.Count} stdlib modules).");

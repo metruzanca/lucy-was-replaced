@@ -70,6 +70,8 @@ cp "$repo_root/CHANGELOG.md" "$pkg/CHANGELOG.md"
 # Manual-install guide + third-party licenses travel with the plugin (kept out of the game root).
 cp "$repo_root/docs/INSTALL.md" "$plug/"
 cp "$repo_root/THIRD_PARTY_NOTICES.md" "$plug/"
+# The in-game Gleam reference, so manual-install players can read it next to the guide.
+cp "$repo_root/src/GleamRuntime/Embedded/docs/game-reference.md" "$plug/game-reference.md"
 
 echo "==> Zipping"
 rm -f "$dist/GleamFarmer-$version.zip"
