@@ -28,13 +28,14 @@ right inside the game, paced exactly like the game's own scripts.
 import game
 
 pub fn main() {
-  game.till()
-  game.plant(game.Carrot)
-  game.move(game.North)
+	game.harvest()
+	game.do_a_flip()
+	main()
 }
 ```
 
-Press **Run**. Your drone tills the ground, plants a carrot, and moves on.
+Press **Run**. Your drone tries to harvest, does a flip, and does it again. Press
+**Run** again to stop.
 
 ## Installing
 

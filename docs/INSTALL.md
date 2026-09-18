@@ -61,12 +61,11 @@ for you.
 
    ```gleam
    import game
-   import gleam/io
 
    pub fn main() {
-     game.till()
-     game.plant(game.Carrot)
-     io.println("planted a carrot")
+     game.harvest()
+     game.do_a_flip()
+     main()
    }
    ```
 
