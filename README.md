@@ -1,19 +1,14 @@
 # Lucy was Replaced
 
-
 https://github.com/user-attachments/assets/f247f92b-9493-4e8b-a41b-d544b17fbb0f
 
-Play *The Farmer Was Replaced* with **Gleam**, a real programming language, instead of
+Play *The Farmer Was Replaced* with the **Gleam** programming language instead of
 the game's built-in Python.
-
-You type your farm code in the same editor you already know. The difference: your code is
-written in Gleam, a friendly language that catches mistakes before they happen. It runs
-right inside the game, paced exactly like the game's own scripts.
 
 ## Why Gleam?
 
 - **Fewer surprises**: Gleam checks your code before it runs, so you catch mistakes early.
-- **Easy to read**: clean formatting and a simple, consistent structure.
+- **Easy to read**: little syntax and one way to do things means code reads the same everywhere.
 - **Beginner friendly**: if you can follow a recipe, you can write a Gleam program.
 
 ## What can you do with it?
@@ -23,7 +18,9 @@ right inside the game, paced exactly like the game's own scripts.
 - **Run several drones at once** to work the farm faster.
 - **Split your code across windows** and reuse it like building blocks.
 
-## A first program
+## Examples
+
+A first program might look like this:
 
 ```gleam
 import game
@@ -35,8 +32,60 @@ pub fn main() {
 }
 ```
 
-Press **Run**. Your drone tries to harvest, does a flip, and does it again. Press
-**Run** again to stop.
+...but a few minutes in you might end up with this:
+
+```gleam
+// utils.gleam
+import game
+import gleam/list
+
+pub fn visit_all(size: Int, do_work) {
+	use _ <- list.each(list.repeat(True, size))
+	game.move(game.East)
+	use _ <- list.each(list.repeat(True, size))
+	game.move(game.North)
+	do_work()
+}
+
+pub fn repeat(do_work: fn() -> Nil) {
+	do_work()
+	repeat(do_work)
+}
+
+pub fn try_harvest_with(func: fn() -> Bool) {
+	case game.can_harvest() {
+		True -> {
+			game.harvest()
+			func()
+		}
+		_ -> False
+	}
+}
+
+pub fn try_harvest() {
+	try_harvest_with(fn() {})
+}
+```
+
+```gleam
+//farm_carrots.gleam
+import game
+import gleam/list
+import utils
+
+pub fn main() {
+	utils.visit_all(3, fn() {
+		game.till()
+		game.plant(game.Carrot)
+	})
+	
+	use <- utils.repeat()
+	use <- utils.visit_all(3)
+
+	use <- utils.try_harvest_with()
+	game.plant(game.Carrot)
+}
+```
 
 ## Installing
 
