@@ -5,3 +5,8 @@ dotnet = "8"
 description = "Build + verify the Thunderstore package (scripts/release.sh)"
 run = "bash scripts/release.sh"
 env = { DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1" }
+
+[tasks.release-gh]
+description = "Build the package and create a GitHub release with it (scripts/release-gh.sh)"
+run = "bash scripts/release-gh.sh"
+env = { DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1" }

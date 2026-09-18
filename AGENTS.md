@@ -20,6 +20,35 @@ pub fn main() {
 - Run a Gleam file headless: `./scripts/run-gleam.sh examples/<name>.gleam`
 - Hot-reload into the game: `./scripts/push-to-game-save.sh examples/<name>.gleam gleam`
 - Build the Thunderstore package: `mise release` (project `mise.toml` task → `scripts/release.sh`)
+- Package + GitHub release: `mise release-gh` (builds, then creates/updates the `v<version>` release)
+
+## Commits (Conventional Commits)
+
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) so
+`mise release-gh`'s `gh release create --generate-notes` produces a useful changelog.
+
+Format: `<type>(<scope>): <subject>`
+
+Types:
+- `feat:` — new feature
+- `fix:` — bug fix
+- `perf:` — performance change
+- `refactor:` — no behavior change
+- `docs:` — docs only (README, `docs/`, AGENTS.md, CHANGELOG)
+- `test:` — tests only
+- `build:` — packaging/build (package.sh, mise.toml, scripts)
+- `ci:` — CI only
+- `chore:` — maintenance/tooling
+- `style:` — formatting, no behavior change
+- `revert:`
+- Breaking change: append `!` (`feat!:`/`fix!:`) or add a `BREAKING CHANGE:` footer.
+
+Rules:
+- Subject: imperative mood, lowercase, no trailing period, ≤ 72 chars.
+- Scope is optional, e.g. `fix(game):`, `feat(drones):`.
+- One logical change per commit.
+- Prefer the standard types over repo-historical prefixes: `feat` (not `feature`),
+  `build` (not `pkg`/`release`), `chore` (not `tooling`), `docs` (not `plan`).
 
 ## In-game flow & debugging
 
