@@ -42,11 +42,15 @@ This:
 2. Assembles a clean plugin folder from `bin/Release/net47/`:
    - managed assemblies: `GleamFarmer`, `GleamRuntime`, `Jint`, `Acornima`,
      `Wasmtime.Dotnet`, `IndexRange`, `System.Memory`, `System.Buffers`,
-     `System.Runtime.CompilerServices.Unsafe`, `System.Numerics.Vectors`,
-     `System.ValueTuple`
+     `System.Runtime.CompilerServices.Unsafe`, `System.Numerics.Vectors`
    - native `wasmtime.dll` (win-x64) from the NuGet cache
    - `Embedded/` (compiler wasm, stdlib, `game` modules, prelude, `game_ffi.mjs`)
    - `INSTALL.md`, `THIRD_PARTY_NOTICES.md` inside the plugin folder
+
+   The four `System.*` facades are required — the game's Mono does **not** ship them
+   (verified absent from `TheFarmerWasReplaced_Data/Managed/`); `Acornima`/`Wasmtime`
+   depend on `System.Memory`/`System.Runtime.CompilerServices.Unsafe`. `System.ValueTuple`
+   is *not* bundled: the game's `mscorlib` provides ValueTuple built-in.
 3. Adds the Thunderstore metadata at the zip root: `manifest.json` (generated from the
    csproj version), `README.md`, `icon.png` (from `assets/icon.png`), `CHANGELOG.md`.
 4. Zips it into `dist/GleamFarmer-<version>.zip` (entries at the zip root, so manual
@@ -62,10 +66,10 @@ python3 -c "import zipfile; z=zipfile.ZipFile('dist/GleamFarmer-0.1.0.zip'); pri
 ```
 
 Checks:
-- Exactly 12 `.dll`s (see the list above) — **no game assemblies** (`Core.dll`,
+- Exactly 11 `.dll`s (see the list above) — **no game assemblies** (`Core.dll`,
   `Utils.dll`, `UnityEngine*`, `Unity.TextMeshPro`) and no .NET Standard facade
-  shims (`System.AppContext.dll`, `System.Collections*.dll`, …) — the game
-  provides those.
+  shims beyond the four required ones (`System.AppContext.dll`,
+  `System.Collections*.dll`, … are not bundled — the game provides those).
 - `Embedded/gleam_wasm_bg.wasm`, `Embedded/stdlib/`, `Embedded/game.gleam`,
   `Embedded/game/`, `Embedded/prelude.mjs`, `Embedded/game_ffi.mjs` present.
 

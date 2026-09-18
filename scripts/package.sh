@@ -13,10 +13,13 @@ pkg="$dist/GleamFarmer-$version"
 plug="$pkg/BepInEx/plugins/GleamFarmer"
 
 # Managed assemblies the plugin needs (game assemblies are NOT redistributed).
+# The System.* netstandard facades are required: the game's Mono lacks them (verified:
+# absent from TheFarmerWasReplaced_Data/Managed). System.ValueTuple is NOT needed — the
+# game's mscorlib provides ValueTuple built-in.
 dlls=(
   GleamFarmer GleamRuntime Jint Acornima Wasmtime.Dotnet IndexRange
   System.Memory System.Buffers System.Runtime.CompilerServices.Unsafe
-  System.Numerics.Vectors System.ValueTuple
+  System.Numerics.Vectors
 )
 
 rm -rf "$pkg"
