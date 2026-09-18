@@ -104,7 +104,8 @@ The package zip is already Thunderstore-compatible (`manifest.json`, `README.md`
 
 ### Manually
 
-1. **Build** the zip: `./scripts/release.sh` (or just `./scripts/package.sh`).
+1. **Build** the zip: `mise release` (wraps `./scripts/release.sh`, which builds
+   `./scripts/package.sh` and verifies the result).
 2. **Validate**:
    - `unzip -l dist/GleamFarmer-<version>.zip` — root must list `manifest.json`,
      `README.md`, `icon.png`, `CHANGELOG.md`, then `BepInEx/plugins/GleamFarmer/…`.
@@ -122,7 +123,7 @@ The package zip is already Thunderstore-compatible (`manifest.json`, `README.md`
 
 - [ ] Assets fetched (`fetch-game-assets.sh`, `fetch-stdlib.sh`)
 - [ ] Version bumped in `GleamFarmer.csproj`
-- [ ] `./scripts/release.sh`
+- [ ] `mise release`
 - [ ] Zip inspected (12 DLLs, Embedded present, no game assemblies)
 - [ ] Headless tests pass
 - [ ] Clean-install in-game smoke test passes

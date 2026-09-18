@@ -1,0 +1,7 @@
+[tools]
+dotnet = "8"
+
+[tasks.release]
+description = "Build + verify the Thunderstore package (scripts/release.sh)"
+run = "bash scripts/release.sh"
+env = { DOTNET_SYSTEM_GLOBALIZATION_INVARIANT = "1" }

@@ -19,6 +19,7 @@ pub fn main() {
 - Tests: `dotnet test tests/GleamRuntime.Tests`
 - Run a Gleam file headless: `./scripts/run-gleam.sh examples/<name>.gleam`
 - Hot-reload into the game: `./scripts/push-to-game-save.sh examples/<name>.gleam gleam`
+- Build the Thunderstore package: `mise release` (project `mise.toml` task → `scripts/release.sh`)
 
 ## In-game flow & debugging
 
