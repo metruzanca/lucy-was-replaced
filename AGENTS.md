@@ -99,6 +99,16 @@ files; never edit the copy in a bundle. Write both for the player:
   is per-engine; the shared `TickPacer` is lock-serialized (one global op budget across drones).
 - Multi-drone: one worker thread + Jint engine per drone; workers must be `pub fn` (resolved
   by compiled `.name`); headless drone tests use `CompiledGleam.Run(..., enableDrones: true)`.
+- Executed-line highlight + step-through: `GleamRunner.Compile` builds a JS-step→Gleam-line
+  map per player module (`GleamStatementScanner` + `GleamLineMapBuilder`, both Acornima-based;
+  the JS step sequence zips ~1:1 to Gleam statement lines with recognisable glue: `$`/`$N`/
+  `loop$`/`_pipe`/`_block` temps, `.head`/`.tail` destructures, `let $ = subject; if ($…)`).
+  The Jint Step handler reports each executed line via `IGleamLineSink` and, in step mode
+  (`TickEngine.StepGate`, shared across engines), blocks on a new line until `Next()`.
+  The plugin forwards lines to the game's `BlinkManager` via a fake `Node` (`GleamBlinkNode`)
+  + re-blinks the current statement while paused; `CodeWindow.PressStepByStepButton` is
+  patched (step button), Execute exits step mode, and `PacedGleamRun.Stop()` aborts the gate
+  so a blocked worker never deadlocks.
 
 ## Gleam ↔ modules
 

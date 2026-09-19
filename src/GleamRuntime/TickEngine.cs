@@ -25,10 +25,11 @@ namespace GleamRuntime
     /// </summary>
     public sealed class TickEngine
     {
-        public TickEngine(IGleamRunController? run = null)
+        public TickEngine(IGleamRunController? run = null, StepGate? stepGate = null)
         {
             Ops = new OpAccumulator();
             Pacer = new TickPacer(Ops, run);
+            StepGate = stepGate ?? new StepGate();
         }
 
         /// <summary>Total ops consumed so far (computation + actions).</summary>
@@ -36,6 +37,9 @@ namespace GleamRuntime
 
         /// <summary>Real-time pacing to `ops * OpDuration`.</summary>
         public TickPacer Pacer { get; }
+
+        /// <summary>Step-through gate (shared across engines), inactive until entered.</summary>
+        public StepGate StepGate { get; }
     }
 
     /// <summary>Thread-safe total-op counter backing `get_tick_count`.</summary>

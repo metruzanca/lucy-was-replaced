@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Watch your program run: the editor highlights the line currently executing, just like
+  the game's own Python editor. It moves fast in normal runs — that's the point.
+- Slow things down and really read your code: the step-by-step button now works for
+  Gleam too. Start a run in step mode and press it once per line to walk through your
+  program one statement at a time.
+
 ## 0.2.0
 
 - The in-game help now speaks Gleam: the docs window, hover tooltips, and autocomplete

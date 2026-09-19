@@ -71,6 +71,7 @@ namespace GleamRuntime
             string entryModuleName = "main",
             IEnumerable<(string Name, string Code)>? userModules = null)
         {
+            var modules = userModules?.ToList() ?? new List<(string, string)>();
             var project = _compiler.NewProject();
             try
             {
@@ -78,9 +79,8 @@ namespace GleamRuntime
                     project.WriteModule(name, code);
                 foreach (var (name, code) in _extraModules)
                     project.WriteModule(name, code);
-                if (userModules != null)
-                    foreach (var (name, code) in userModules)
-                        project.WriteModule(name, code);
+                foreach (var (name, code) in modules)
+                    project.WriteModule(name, code);
 
                 project.WriteModule(entryModuleName, source);
                 project.CompilePackage("javascript");
@@ -97,13 +97,10 @@ namespace GleamRuntime
                     var js = project.ReadCompiledJavascript(name);
                     if (js != null) sources[name] = RewriteEcho(js);
                 }
-                if (userModules != null)
+                foreach (var (name, _) in modules)
                 {
-                    foreach (var (name, _) in userModules)
-                    {
-                        var js = project.ReadCompiledJavascript(name);
-                        if (js != null) sources[name] = RewriteEcho(js);
-                    }
+                    var js = project.ReadCompiledJavascript(name);
+                    if (js != null) sources[name] = RewriteEcho(js);
                 }
 
                 var entryJs = project.ReadCompiledJavascript(entryModuleName);
@@ -114,7 +111,18 @@ namespace GleamRuntime
                 sources[entryModuleName] = RewriteEcho(entryJs);
                 sources[EntryModule] = EntrySource(entryModuleName);
 
-                return new CompiledGleam(sources);
+                // Build JS step → Gleam line maps for the windows' modules (entry + other
+                // code windows). Stdlib/game modules have no editor window to highlight.
+                var playerModules = new List<(string Name, string Code)> { (entryModuleName, source) };
+                playerModules.AddRange(modules);
+                var lineMaps = new Dictionary<string, GleamLineMap>();
+                foreach (var (name, code) in playerModules)
+                {
+                    if (!sources.TryGetValue(name, out var js) || js == null) continue;
+                    lineMaps[name] = GleamLineMapBuilder.Build(js, GleamStatementScanner.Scan(code));
+                }
+
+                return new CompiledGleam(sources, lineMaps);
             }
             finally
             {
@@ -179,11 +187,21 @@ namespace GleamRuntime
     public sealed class CompiledGleam
     {
         private readonly IReadOnlyDictionary<string, string> _sources;
+        private readonly IReadOnlyDictionary<string, GleamLineMap> _lineMaps;
 
-        internal CompiledGleam(IReadOnlyDictionary<string, string> sources) => _sources = sources;
+        internal CompiledGleam(
+            IReadOnlyDictionary<string, string> sources,
+            IReadOnlyDictionary<string, GleamLineMap>? lineMaps = null)
+        {
+            _sources = sources;
+            _lineMaps = lineMaps ?? new Dictionary<string, GleamLineMap>();
+        }
 
         /// <summary>The compiled ESM module map (for running on a custom host).</summary>
         public IReadOnlyDictionary<string, string> Sources => _sources;
+
+        /// <summary>JS step → Gleam line maps, keyed by module name (player modules only).</summary>
+        public IReadOnlyDictionary<string, GleamLineMap> LineMaps => _lineMaps;
 
         /// <summary>Execute the package (imports the entry wrapper, which calls main()).</summary>
         public GleamRunResult Run(
@@ -191,7 +209,8 @@ namespace GleamRuntime
             TimeSpan? timeout = null,
             IGameBridge? bridge = null,
             TickEngine? ticks = null,
-            bool enableDrones = false)
+            bool enableDrones = false,
+            IGleamLineSink? lineSink = null)
         {
             DroneController? drones = null;
             IGameDroneHost? droneHost = null;
@@ -201,13 +220,14 @@ namespace GleamRuntime
                 var stub = bridge ?? new StubGameBridge();
                 drones = new DroneController(
                     _sources, sink, timeout ?? TimeSpan.FromSeconds(30), ticks,
-                    run: null, cancellation: default,
+                    run: null, cancellation: default, lineSink: lineSink, lineMaps: _lineMaps,
                     id => new StubGameBridge { Ops = ticks.Ops });
                 droneHost = new DroneBridge(drones, 0, stub);
             }
 
             using var js = new JsRuntime(
-                _sources, sink, timeout, bridge, cancellationToken: default, ticks: ticks, drones: droneHost);
+                _sources, sink, timeout, bridge, cancellationToken: default, ticks: ticks,
+                drones: droneHost, lineMaps: _lineMaps, lineSink: lineSink);
             try
             {
                 js.RunMain();

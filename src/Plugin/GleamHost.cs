@@ -27,7 +27,10 @@ namespace GleamFarmer
         private readonly MainThreadDispatcher _dispatcher = new();
         private readonly object _runLock = new();
         private PacedGleamRun? _activeRun;
+        private GleamHighlightBridge? _highlight;
         private volatile bool _compiling;
+        private volatile bool _stepOnStart;
+        private float _lastReblink;
 
         private GleamHost(GleamRunner runner, ConfigEntry<bool> enabled)
         {
@@ -45,6 +48,47 @@ namespace GleamFarmer
 
         /// <summary>Apply external `.gleam` edits to windows. Called from Update().</summary>
         public void PumpProjectSync() => ProjectSync?.Pump();
+
+        /// <summary>Drain pending line highlights into the game's overlay. Called from Update().</summary>
+        public void PumpHighlights()
+        {
+            _highlight?.Pump();
+
+            // While paused in step-through mode, re-blink the current statement so it stays
+            // lit instead of fading out after the game's blink interval.
+            if (_activeRun?.StepGate is { IsActive: true } && _highlight != null
+                && UnityEngine.Time.realtimeSinceStartup - _lastReblink > 0.2f)
+            {
+                _lastReblink = UnityEngine.Time.realtimeSinceStartup;
+                _highlight.ReBlink();
+            }
+        }
+
+        /// <summary>
+        /// Toggle step-through: advance one line when already stepping, otherwise enter step
+        /// mode (starting a run if none is active).
+        /// </summary>
+        public void OnStepPressed(CodeWindow window)
+        {
+            lock (_runLock)
+            {
+                if (_activeRun != null)
+                {
+                    var gate = _activeRun.StepGate;
+                    if (gate.IsActive)
+                    {
+                        gate.Next();
+                        return;
+                    }
+                    gate.Enter();
+                    window.StartStepByStepMode();
+                    return;
+                }
+            }
+
+            _stepOnStart = true;
+            Run(window);
+        }
 
         public static void Init(ManualLogSource log, ConfigEntry<bool> enabled, ConfigEntry<bool> externalProject)
         {
@@ -120,6 +164,16 @@ namespace GleamFarmer
             {
                 if (_activeRun != null)
                 {
+                    // While stepping, Execute exits step mode (and the run continues).
+                    var gate = _activeRun.StepGate;
+                    if (gate is { IsActive: true })
+                    {
+                        Log.LogInfo("GleamFarmer: exiting step mode…");
+                        gate.Exit();
+                        window.StartExecutionMode();
+                        return true;
+                    }
+
                     Log.LogInfo("GleamFarmer: stopping run…");
                     var run = _activeRun;
                     _activeRun = null;
@@ -147,6 +201,11 @@ namespace GleamFarmer
                 var moduleNames = new List<string> { entryName };
                 moduleNames.AddRange(userModules.Select(m => m.Item1));
                 Log.LogInfo($"GleamFarmer: compiling… modules: {string.Join(", ", moduleNames)}");
+
+                // Snapshot the windows + line offsets for the live highlight (the worker
+                // thread must not touch Unity objects).
+                _highlight?.Reset();
+                _highlight = BuildHighlightBridge(window, entryName);
 
                 // Compile off the Unity main thread so the WASM compile (~100-300ms) doesn't
                 // stutter the game; the cheap, Unity-touching window gathering above stays on
@@ -207,7 +266,9 @@ namespace GleamFarmer
                 _dispatcher.Invoke(() =>
                 {
                     var sink = new PluginSink(Log);
-                    var run = new PacedGleamRun(compiled, _dispatcher, sink);
+                    var run = new PacedGleamRun(compiled, _dispatcher, sink, _highlight);
+                    if (_stepOnStart) run.StepGate.Enter();
+                    _stepOnStart = false;
                     run.Completed += () => OnRunFinished(window, run, sink, error: null);
                     run.Failed += error => OnRunFinished(window, run, sink, error);
 
@@ -218,6 +279,8 @@ namespace GleamFarmer
                     }
 
                     window.StartExecutionMode();
+                    if (run.StepGate.IsActive) window.StartStepByStepMode();
+                    window.SetExecutionColor();
                     run.Start();
                     Log.LogInfo("GleamFarmer: run started (project).");
                     return true;
@@ -244,10 +307,12 @@ namespace GleamFarmer
             try
             {
                 var compiled = _runner.Compile(source, entryName, userModules);
-                _dispatcher.Invoke(() =>
+_dispatcher.Invoke(() =>
                 {
                     var sink = new PluginSink(Log);
-                    var run = new PacedGleamRun(compiled, _dispatcher, sink);
+                    var run = new PacedGleamRun(compiled, _dispatcher, sink, _highlight);
+                    if (_stepOnStart) run.StepGate.Enter();
+                    _stepOnStart = false;
                     run.Completed += () => OnRunFinished(window, run, sink, error: null);
                     run.Failed += error => OnRunFinished(window, run, sink, error);
 
@@ -258,6 +323,8 @@ namespace GleamFarmer
                     }
 
                     window.StartExecutionMode();
+                    if (run.StepGate.IsActive) window.StartStepByStepMode();
+                    window.SetExecutionColor();
                     run.Start();
                     Log.LogInfo("GleamFarmer: run started.");
                     return true;
@@ -279,6 +346,7 @@ namespace GleamFarmer
 
         private void OnRunFinished(CodeWindow window, PacedGleamRun run, PluginSink sink, Exception? error)
         {
+            _stepOnStart = false;
             lock (_runLock)
             {
                 // A stopped run's Completed can fire after the player already started (or is
@@ -394,6 +462,37 @@ namespace GleamFarmer
                 index++;
             }
             return Math.Min(index + column - 1, text.Length);
+        }
+
+        /// <summary>
+        /// Snapshot the open code windows and their per-line char offsets so the worker
+        /// thread can map executed Gleam lines to highlight ranges without touching Unity.
+        /// Every validly-named window is importable, so module → window is just the map.
+        /// </summary>
+        private static GleamHighlightBridge? BuildHighlightBridge(CodeWindow active, string entryName)
+        {
+            var workspace = MainSim.Inst?.workspace;
+            if (workspace?.codeWindows == null) return null;
+
+            var windows = new Dictionary<string, (CodeWindow, int[])>();
+            foreach (var pair in workspace.codeWindows)
+            {
+                var name = pair.Key;
+                var window = pair.Value;
+                if (ReferenceEquals(window, active) || !GleamModuleNames.IsValidModuleName(name))
+                    continue;
+                windows[name] = (window, ComputeLineOffsets(GetCodeText(window)));
+            }
+            windows[entryName] = (active, ComputeLineOffsets(GetCodeText(active)));
+            return new GleamHighlightBridge(windows);
+        }
+
+        private static int[] ComputeLineOffsets(string text)
+        {
+            var offsets = new List<int> { 0 };
+            for (var i = 0; i < text.Length; i++)
+                if (text[i] == '\n') offsets.Add(i + 1);
+            return offsets.ToArray();
         }
     }
 

@@ -40,6 +40,7 @@ namespace GleamFarmer
         {
             GleamHost.Instance?.PumpDispatcher();
             GleamHost.Instance?.PumpProjectSync();
+            GleamHost.Instance?.PumpHighlights();
         }
     }
 }

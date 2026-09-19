@@ -29,7 +29,9 @@ namespace GleamRuntime
             IGleamPrintHandler? print = null,
             CancellationToken cancellationToken = default,
             TickEngine? ticks = null,
-            IGameDroneHost? drones = null)
+            IGameDroneHost? drones = null,
+            IReadOnlyDictionary<string, GleamLineMap>? lineMaps = null,
+            IGleamLineSink? lineSink = null)
         {
             var loader = new GleamModuleLoader(moduleSources);
             _engine = new Engine(options =>
@@ -51,14 +53,55 @@ namespace GleamRuntime
             if (drones != null) _engine.SetValue("__gleam_drones", drones);
             if (ticks != null)
             {
+                // Per-engine weight cache (AST nodes are not shared across engines).
+                var weights = _weights;
+                var maps = lineMaps;
+                var lineSinkLocal = lineSink;
+                var stepGate = ticks.StepGate;
+                var lastLine = new Dictionary<string, int>(StringComparer.Ordinal);
                 _engine.Debugger.Step += (_, e) =>
                 {
-                    // Per-engine weight cache (AST nodes are not shared across engines).
-                    var weight = _weights.Get(e.CurrentNode);
+                    var node = e.CurrentNode;
+                    var weight = weights.Get(node);
                     if (weight > 0) ticks.Pacer.Account(weight);
+
+                    if (maps != null && lineSinkLocal != null && node != null)
+                    {
+                        var module = NormalizeModule(e.Location.SourceFile ?? string.Empty);
+                        if (maps.TryGetValue(module, out var map))
+                        {
+                            var start = e.Location.Start;
+                            // Unmapped nodes (loop-back edges, synthetic steps) keep the last
+                            // highlighted line for the module instead of jumping to a default.
+                            var previous = lastLine.TryGetValue(module, out var known)
+                                ? known
+                                : map.Get(start.Line, start.Column);
+                            var line = previous;
+                            if (map.TryGet(start.Line, start.Column, out var mapped))
+                            {
+                                line = mapped;
+                                lastLine[module] = line;
+                            }
+                            lineSinkLocal.OnLine(module, line);
+
+                            if (stepGate.IsActive && line != previous)
+                            {
+                                stepGate.Close();
+                                if (!stepGate.WaitForNext())
+                                    throw new GleamStoppedException();
+                            }
+                        }
+                    }
                     return StepMode.Into;
                 };
             }
+        }
+
+        private static string NormalizeModule(string source)
+        {
+            if (source.EndsWith(".mjs", StringComparison.Ordinal))
+                return source.Substring(0, source.Length - 4);
+            return source;
         }
 
         /// <summary>Execute the package: import the entry wrapper, which calls main().</summary>

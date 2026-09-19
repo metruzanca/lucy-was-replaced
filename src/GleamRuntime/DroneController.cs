@@ -80,6 +80,8 @@ namespace GleamRuntime
         private readonly TickEngine _ticks;
         private readonly IGleamRunController? _run;
         private readonly Func<int, IGameBridge> _bridgeFactory;
+        private readonly IGleamLineSink? _lineSink;
+        private readonly IReadOnlyDictionary<string, GleamLineMap>? _lineMaps;
         private readonly CancellationTokenSource _cancellation;
         private readonly ConcurrentDictionary<int, DroneSlot> _drones = new();
         private readonly ConcurrentDictionary<int, Mailbox> _mailboxes = new();
@@ -94,6 +96,8 @@ namespace GleamRuntime
             TickEngine ticks,
             IGleamRunController? run,
             CancellationToken cancellation,
+            IGleamLineSink? lineSink,
+            IReadOnlyDictionary<string, GleamLineMap>? lineMaps,
             Func<int, IGameBridge> bridgeFactory)
         {
             _moduleSources = moduleSources;
@@ -101,6 +105,8 @@ namespace GleamRuntime
             _timeout = timeout;
             _ticks = ticks;
             _run = run;
+            _lineSink = lineSink;
+            _lineMaps = lineMaps;
             _bridgeFactory = bridgeFactory;
             _cancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation);
         }
@@ -183,7 +189,7 @@ namespace GleamRuntime
                 var drones = new DroneBridge(this, slot.Id, slot.Bridge);
                 using var js = new JsRuntime(
                     sources, _sink, _timeout, slot.Bridge, slot.Bridge as IGleamPrintHandler,
-                    _cancellation.Token, _ticks, drones);
+                    _cancellation.Token, _ticks, drones, lineMaps: _lineMaps, lineSink: _lineSink);
                 js.RunModule($"__drone_{slot.Id}");
                 slot.ResultJson = js.ReadGlobalString("__gleam_drone_result");
                 Complete(slot);

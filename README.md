@@ -30,6 +30,9 @@ and look under *Gleam Programming*.
 - **Edit with an external editor**: your code windows are mirrored to a real Gleam
   project on disk, so you get full autocomplete, hover, and error checking from the
   Gleam language server. See [Editing from an external editor](#editing-from-an-external-editor).
+- **Watch your program run**: the editor highlights the line executing right now, and
+  the step-by-step button walks through your code one line at a time when you want to
+  really read it.
 
 ## Examples
 
