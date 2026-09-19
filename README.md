@@ -2,14 +2,24 @@
 
 https://github.com/user-attachments/assets/f247f92b-9493-4e8b-a41b-d544b17fbb0f
 
-Play *The Farmer Was Replaced* with the **Gleam** programming language instead of
-the game's built-in Python.
+Play *The Farmer Was Replaced* with the **Gleam** programming language
+([gleam.run](https://gleam.run)) instead of the game's built-in Python.
 
-## Why Gleam?
+## What is Gleam?
+
+Gleam is a programming language — the friendly kind. Where the game normally has you
+write Python, this mod lets you program your farm in Gleam instead. It's built for
+people who'd rather spend their time farming than fighting syntax:
 
 - **Fewer surprises**: Gleam checks your code before it runs, so you catch mistakes early.
 - **Easy to read**: little syntax and one way to do things means code reads the same everywhere.
 - **Beginner friendly**: if you can follow a recipe, you can write a Gleam program.
+
+Gleam is free and open source, and the official site has an interactive tour that
+teaches the basics in a few minutes: [gleam.run](https://gleam.run).
+
+New to Gleam? The mod has a quick primer built in — open the docs window in the game
+and look under *Gleam Programming*.
 
 ## What can you do with it?
 
