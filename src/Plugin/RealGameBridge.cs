@@ -415,6 +415,24 @@ namespace GleamFarmer
 
         // ---- quick_print (free print, no pacing) ----
 
-        public void quick_print(string text) => _log.Log(text);
+        public void quick_print(string text)
+        {
+            _log.Log(text);
+            try
+            {
+                _dispatcher.Invoke(() =>
+                {
+                    // The game's own quick_print funnels through Logger.Log, which
+                    // appends to the save's output.txt and the in-game output page.
+                    Logger.Log(text);
+                    return true;
+                });
+            }
+            catch
+            {
+                // Logging is best-effort; a mid-run main-thread hiccup must not
+                // abort an echo.
+            }
+        }
     }
 }
