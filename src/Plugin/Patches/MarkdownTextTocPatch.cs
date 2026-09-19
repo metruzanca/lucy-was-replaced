@@ -10,7 +10,9 @@ namespace GleamFarmer.Patches
     /// game's unlock gating (same keys), and the "builtins" section gains a leading
     /// overview entry. The home page's "Programming" section (Python scripting links)
     /// is replaced with the Gleam primer + stdlib pages; its heading is renamed to
-    /// "Gleam Programming" via the Localizer patch.
+    /// "Gleam Programming" via the Localizer patch. A small "Feedback" section with
+    /// GitHub links (Discussions first, Issues for bugs) follows it — the game opens
+    /// external <c>https</c> links in the system browser.
     /// </summary>
     [HarmonyPatch(typeof(MarkdownText))]
     public static class MarkdownTextTocPatch
@@ -36,7 +38,10 @@ namespace GleamFarmer.Patches
             var contentEnd = text.IndexOf("\n## ", contentStart, System.StringComparison.Ordinal);
             if (contentEnd < 0) contentEnd = text.Length;
 
-            var gleam = "\n" + GleamDocs.PrimerToc() + "\n" + GleamDocs.StdlibToc();
+            var gleam = "\n" + GleamDocs.PrimerToc() + "\n" + GleamDocs.StdlibToc()
+                + "\n\n## Feedback\n\n"
+                + "[GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions) — feedback, ideas, questions\n\n"
+                + "[GitHub Issues](https://github.com/metruzanca/tfwr-gleam/issues) — report a bug\n\n";
             text = text.Substring(0, contentStart) + gleam + text.Substring(contentEnd);
         }
 
