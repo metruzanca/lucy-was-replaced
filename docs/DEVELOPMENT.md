@@ -18,6 +18,16 @@ Gleam source (in-game editor)
 - **Multiple modules**: every open code window is an importable Gleam module — create a
   `utils` window and `import utils` from another window (helpers you call across modules need
   `pub fn`). The window you run is the entry point.
+- **External editing (Gleam project)**: with the `ExternalProject` config enabled (default),
+  the mod mirrors the windows to a real Gleam project at `<save>/gleam-project/` (a subfolder
+  of the save dir — the game only watches top-level `.py` files, so it's invisible to the
+  game). `GleamProjectSync` scaffolds `gleam.toml`/`manifest.toml` (pinned to the embedded
+  gleam_stdlib) plus `src/game.gleam`/`game/item.gleam`/`game_ffi.mjs` as LSP stubs, watches
+  `src/*.gleam` via `FileSystemWatcher` to push external edits into open windows, flushes
+  windows → files on Run and on `Saver.SaveCode`, and seeds windows from the project on load.
+  Run compiles the project from disk (`GleamRunner.CompileFromProject`), so the LSP and the
+  runtime read the same bytes. This makes full Gleam LSP work in an external editor.
+  `SaverSaveCodePatch`/`SaverLoadPatch` are the Harmony hooks.
 - **Full tick model**: pure Gleam computation is op-accounted too. Jint's debugger fires per
   executed statement; each statement's AST is weighted against the game's tick rules
   (binary op = 1, if branch = 1, loop start = 1, index = 1; calls/reads free), then all ops
@@ -128,9 +138,13 @@ floating print bubbles above the drone.
 ## Repository layout
 
 - `src/GleamRuntime/` — compiler WASM host (Wasmtime + wasm-bindgen glue), stdlib/prelude
-  bundling, Jint ESM host, `game` FFI bridge interfaces.
+  bundling, Jint ESM host, `game` FFI bridge interfaces, on-disk project source
+  (`GleamProjectSource`, `CompileFromProject`).
 - `src/Plugin/` — BepInEx plugin: Harmony patches (Run intercept, Python-parse skip, Gleam
-  syntax highlighting), paced worker execution, real game bridge.
+  syntax highlighting), paced worker execution, real game bridge, external-editor project
+  sync (`GleamProjectSync` + `SaverSaveCodePatch`/`SaverLoadPatch`).
+- `src/Plugin/Embedded/project-template/` — the `gleam.toml`/`manifest.toml` scaffold
+  shipped for external-editor projects.
 - `examples/` — runnable Gleam scripts.
 - `docs/` — research notes (game internals, wasm compiler ABI, runtime decision).
 

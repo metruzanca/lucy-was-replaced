@@ -250,6 +250,25 @@ Extends the M10 surfaces to the stdlib and to beginner guides.
   state must not be mutated in parallel).
 - [ ] In-game validation: `int.` autocomplete + hover tooltips + primer pages in the docs window
 
+### M11 — External-editor Gleam project ✅ CORE DONE
+Real on-disk Gleam project so players can edit code windows in an external editor with
+full Gleam LSP (completion, hover, go-to-def, diagnostics, `gleam format`).
+- `GleamProjectSource` (GleamRuntime): discover/load `src/*.gleam` (valid, non-reserved
+  names; nested `game/*` and the `game`/`game_ffi` stubs excluded).
+- `GleamRunner.CompileFromProject(projectDir, entryName, entrySource)` — compile the
+  on-disk project (entry source overridable by the active window), so LSP and runtime
+  read the same bytes.
+- `GleamProjectSync` (Plugin): scaffolds `<save>/gleam-project/` (`gleam.toml` +
+  `manifest.toml` pinning the embedded gleam_stdlib, copied `game.gleam`/`game/item.gleam`/
+  `game_ffi.mjs` LSP stubs), `FileSystemWatcher` files→windows, `FlushWindows`
+  windows→files on Run + `Saver.SaveCode`, `SeedWindowsFromProject` on `Saver.Load`.
+- Config toggle `ExternalProject` (default true); disabled → old in-memory window compile.
+- Bundled templates: `src/Plugin/Embedded/project-template/{gleam.toml,manifest.toml}`.
+- Tests (5): module discovery filters, entry from disk, entry-source override, missing-entry
+  error, disk-vs-memory parity. `gleam check` verified against the bundled template + stubs.
+- [ ] In-game validation: scaffold appears on Run; external edit hot-reloads; save flushes;
+      load seeds; `gleam check`/LSP in VS Code resolve `game.*` and stdlib.
+
 ---
 
 ## Decisions (locked)

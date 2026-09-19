@@ -58,6 +58,13 @@ Rules:
 - The game hot-reloads `.py` files in the save dir into open code windows (file watcher,
   `Saver.cs`) — that's how `push-to-game-save.sh` works. Requires the "file watcher" setting,
   the window open, and an in-place write (`cp`); atomic rename-replace may not trigger.
+- External-editor mode (`ExternalProject` config, default on): the mod mirrors windows to a
+  real Gleam project at `<save>/gleam-project/` (real `gleam.toml`/`manifest.toml`, LSP stubs
+  `src/game.gleam`/`game/item.gleam`/`game_ffi.mjs`), syncs via `GleamProjectSync`
+  (`FileSystemWatcher` files→windows + flush windows→files on Run/save), and Run compiles the
+  project from disk (`GleamRunner.CompileFromProject`). The game only watches top-level `.py`,
+  so the subfolder is invisible to it. Debug with a real editor: open the project dir and run
+  `gleam deps download` once, then `gleam check` gives the same errors the mod surfaces.
 - An empty `pub fn main() {}` body compiles to a `todo` call — running it errors with
   "`todo` expression evaluated".
 

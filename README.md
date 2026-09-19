@@ -17,6 +17,9 @@ the game's built-in Python.
 - **Use the whole game toolkit**: sensors, items, unlocks, and the occasional flip.
 - **Run several drones at once** to work the farm faster.
 - **Split your code across windows** and reuse it like building blocks.
+- **Edit with an external editor**: your code windows are mirrored to a real Gleam
+  project on disk, so you get full autocomplete, hover, and error checking from the
+  Gleam language server. See [Editing from an external editor](#editing-from-an-external-editor).
 
 ## Examples
 
@@ -98,3 +101,80 @@ The easiest way is with **r2modman**:
 
 Prefer to do it by hand? Follow the manual install steps in
 [docs/INSTALL.md](docs/INSTALL.md) (also included in the package).
+
+## Editing from an external editor
+
+The in-game editor is nice, but for bigger programs you might want your usual
+tools. The mod keeps every code window in sync with a **real Gleam project** on
+disk, so you can open it in VS Code (Gleam extension), Neovim, or any editor with
+Gleam LSP support, and get autocomplete, hover, go-to-definition, and error
+checking against the actual `game.*` API.
+
+Where is it? In the save folder (see [Where are the saves?](#where-are-the-saves)
+for the exact path on your OS):
+
+```
+<save>/gleam-project/
+├── gleam.toml        # target = "javascript", pins gleam_stdlib
+├── manifest.toml     # dependency lock (same version the mod embeds)
+└── src/
+    ├── main.gleam    # one .gleam per code window (window name = module name)
+    ├── utils.gleam
+    ├── game.gleam        # LSP stub of the game API (read-only)
+    ├── game/item.gleam
+    └── game_ffi.mjs      # external glue for the stub
+```
+
+The mod creates this folder automatically on first Run. The game only watches
+top-level `.py` files, so the `gleam-project` subfolder is left alone.
+
+How it stays in sync:
+
+- **In-game edits** are written to the project on Run and on every game save.
+- **External edits** are picked up by a file watcher and pushed into the open
+  code window.
+- **Compiling reads the project**, so what the editor shows and what the game
+  runs are the same bytes.
+
+## Where are the saves?
+
+The game stores each save in its own folder under `<persistent data>/Saves/`, one
+per in-game save name (e.g. `Save0`, `Gleam`). The Gleam project the mod creates
+lives in the save folder: `<save>/gleam-project/`.
+
+| OS | Save folder |
+|---|---|
+| **Windows** | `%USERPROFILE%\AppData\LocalLow\TheFarmerWasReplaced\TheFarmerWasReplaced\Saves` |
+| **macOS** | `~/Library/Application Support/com.TheFarmerWasReplaced.TheFarmerWasReplaced/Saves` |
+| **Linux** (Proton) | `~/.local/share/Steam/steamapps/compatdata/2060160/pfx/drive_c/users/steamuser/AppData/LocalLow/TheFarmerWasReplaced/TheFarmerWasReplaced/Saves` |
+
+So on Windows your `main` window's project would be at:
+
+```
+%USERPROFILE%\AppData\LocalLow\TheFarmerWasReplaced\TheFarmerWasReplaced\Saves\Save0\gleam-project\
+```
+
+Quick way to open it on Windows: press **Win + R**, paste the path, press Enter.
+
+On Linux you can point the included script at a specific save by setting
+`TFWR_SAVE_DIR` (see `scripts/push-to-game-save.sh`).
+
+To get the language server working:
+
+1. Install the Gleam CLI (`gleam` on [gleam.run](https://gleam.run) or your
+   package manager) and the Gleam extension for your editor.
+2. Open the `<save>/gleam-project/` folder as your workspace.
+3. Run `gleam deps download` once (fetches `gleam_stdlib`, the same version the
+   mod embeds).
+4. Edit `.gleam` files, save, and press **Run** in the game.
+
+Notes:
+
+- Window names are module names: lowercase letters, digits and underscores only
+  (`main`, `utils`, `farm_helper2`). Windows with invalid names aren't mirrored
+  (the game's Python would refuse to import them too).
+- Modules can exist as `.gleam` files even without a matching open window; they
+  are importable from any window, and any window named after a module gets its
+  content when it opens.
+- Toggle the feature off with the `ExternalProject` setting in the BepInEx
+  config if you only want the in-game editor.

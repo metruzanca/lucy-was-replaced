@@ -1,0 +1,4 @@
+*
+!.gitignore
+!project-template/
+!project-template/**

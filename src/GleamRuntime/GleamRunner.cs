@@ -35,6 +35,31 @@ namespace GleamRuntime
         }
 
         /// <summary>
+        /// Compile the on-disk Gleam project: the entry module plus every other
+        /// player module under `src/` are read from disk, so the runtime compiles
+        /// exactly the same bytes an external Gleam LSP sees. The entry module
+        /// source is <paramref name="entrySource"/> when provided (the window the
+        /// player pressed Run on), else the entry module's file on disk.
+        /// </summary>
+        /// <param name="projectDir">Path of the `gleam-project` directory.</param>
+        /// <param name="entryModuleName">Module name for the entry source (default "main").</param>
+        /// <param name="entrySource">Optional override for the entry module's source (the window being run).</param>
+        /// <exception cref="GleamCompileException">The program failed to compile.</exception>
+        public CompiledGleam CompileFromProject(
+            string projectDir,
+            string entryModuleName = "main",
+            string? entrySource = null)
+        {
+            var userModules = GleamProjectSource.LoadModules(projectDir)
+                .Where(m => m.Name != entryModuleName)
+                .ToList();
+            var entry = entrySource ?? GleamProjectSource.ReadModule(projectDir, entryModuleName)
+                ?? throw new GleamCompileException(
+                    $"The entry module '{entryModuleName}.gleam' is missing from the Gleam project.");
+            return Compile(entry, entryModuleName, userModules);
+        }
+
+        /// <summary>
         /// Compile a Gleam program (the entry module must define a public `main`).
         /// </summary>
         /// <param name="source">The entry module's source.</param>

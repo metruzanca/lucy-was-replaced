@@ -37,10 +37,16 @@ namespace GleamFarmer
 
         public bool Enabled => _enabled.Value;
 
+        /// <summary>External-editor project sync (the `gleam-project` folder mirror).</summary>
+        public GleamProjectSync? ProjectSync { get; private set; }
+
         /// <summary>Pump main-thread actions queued by the Gleam worker. Called from Update().</summary>
         public void PumpDispatcher() => _dispatcher.Pump();
 
-        public static void Init(ManualLogSource log, ConfigEntry<bool> enabled)
+        /// <summary>Apply external `.gleam` edits to windows. Called from Update().</summary>
+        public void PumpProjectSync() => ProjectSync?.Pump();
+
+        public static void Init(ManualLogSource log, ConfigEntry<bool> enabled, ConfigEntry<bool> externalProject)
         {
             Log = log;
             try
@@ -98,6 +104,7 @@ namespace GleamFarmer
 
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);
+                Instance.ProjectSync = new GleamProjectSync(Log, embedded, externalProject);
                 Log.LogInfo($"GleamFarmer runtime ready ({stdlib.Count} stdlib modules).");
             }
             catch (Exception ex)
@@ -145,11 +152,39 @@ namespace GleamFarmer
                 // stutter the game; the cheap, Unity-touching window gathering above stays on
                 // the main thread.
                 _compiling = true;
-                new Thread(() => CompileAndStart(window, source, entryName, userModules))
+                if (ProjectSync is { Enabled: true })
                 {
-                    IsBackground = true,
-                    Name = "GleamFarmer-compile",
-                }.Start();
+                    // External-editor mode: persist every window to the project first, then
+                    // compile the on-disk project so the LSP and the runtime read the same bytes.
+                    // If the save dir can't be resolved yet (rare, before the game loads),
+                    // fall back to compiling the window text in-memory.
+                    ProjectSync.EnsureScaffold();
+                    if (ProjectSync.ProjectDir != null)
+                    {
+                        ProjectSync.FlushWindows();
+                        new Thread(() => CompileProjectAndStart(window, source, entryName))
+                        {
+                            IsBackground = true,
+                            Name = "GleamFarmer-compile",
+                        }.Start();
+                    }
+                    else
+                    {
+                        new Thread(() => CompileAndStart(window, source, entryName, userModules))
+                        {
+                            IsBackground = true,
+                            Name = "GleamFarmer-compile",
+                        }.Start();
+                    }
+                }
+                else
+                {
+                    new Thread(() => CompileAndStart(window, source, entryName, userModules))
+                    {
+                        IsBackground = true,
+                        Name = "GleamFarmer-compile",
+                    }.Start();
+                }
                 return true;
             }
             catch (Exception ex)
@@ -157,6 +192,48 @@ namespace GleamFarmer
                 _compiling = false;
                 ShowError(window, ex.Message);
                 return true;
+            }
+        }
+
+        /// <summary>Compile the on-disk project (the window being run is the entry module).</summary>
+        private void CompileProjectAndStart(CodeWindow window, string source, string entryName)
+        {
+            try
+            {
+                var projectDir = ProjectSync?.ProjectDir;
+                if (projectDir == null)
+                    throw new InvalidOperationException("Gleam project not scaffolded.");
+                var compiled = _runner.CompileFromProject(projectDir, entryName, source);
+                _dispatcher.Invoke(() =>
+                {
+                    var sink = new PluginSink(Log);
+                    var run = new PacedGleamRun(compiled, _dispatcher, sink);
+                    run.Completed += () => OnRunFinished(window, run, sink, error: null);
+                    run.Failed += error => OnRunFinished(window, run, sink, error);
+
+                    lock (_runLock)
+                    {
+                        if (_activeRun != null) return true; // superseded before start
+                        _activeRun = run;
+                    }
+
+                    window.StartExecutionMode();
+                    run.Start();
+                    Log.LogInfo("GleamFarmer: run started (project).");
+                    return true;
+                });
+            }
+            catch (GleamCompileException ex)
+            {
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message, entryName); return true; });
+            }
+            catch (Exception ex)
+            {
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message, entryName); return true; });
+            }
+            finally
+            {
+                _compiling = false;
             }
         }
 
@@ -188,11 +265,11 @@ namespace GleamFarmer
             }
             catch (GleamCompileException ex)
             {
-                _dispatcher.Invoke(() => { ShowError(window, ex.Message); return true; });
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message, entryName); return true; });
             }
             catch (Exception ex)
             {
-                _dispatcher.Invoke(() => { ShowError(window, ex.Message); return true; });
+                _dispatcher.Invoke(() => { ShowError(window, ex.Message, entryName); return true; });
             }
             finally
             {
@@ -243,11 +320,14 @@ namespace GleamFarmer
             return ex;
         }
 
-        private static void ShowError(CodeWindow window, string message)
+        private static void ShowError(CodeWindow window, string message, string? entryModuleName = null)
         {
             Log.LogError($"GleamFarmer error:\n{message}");
 
-            var match = Regex.Match(message, @"main\.gleam:(\d+):(\d+)");
+            // Compile diagnostics are formatted `src/<module>.gleam:N:C`; the window
+            // being run is the entry module, so highlight against its text.
+            var module = entryModuleName ?? "main";
+            var match = Regex.Match(message, $@"{Regex.Escape(module)}\.gleam:(\d+):(\d+)");
             if (match.Success && int.TryParse(match.Groups[1].Value, out var line) &&
                 int.TryParse(match.Groups[2].Value, out var column))
             {

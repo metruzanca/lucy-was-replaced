@@ -22,7 +22,14 @@ namespace GleamFarmer
                 true,
                 "When enabled, the in-game editor is compiled as Gleam instead of the built-in Python.");
 
-            GleamHost.Init(Logger, enabled);
+            var externalProject = Config.Bind(
+                "General",
+                "ExternalProject",
+                true,
+                "Mirror the code windows to <save>/gleam-project/ so they can be edited in an " +
+                "external editor with full Gleam LSP support, and compile from that project.");
+
+            GleamHost.Init(Logger, enabled, externalProject);
             _harmony.PatchAll();
 
             Logger.LogInfo($"{MyPluginInfo.PLUGIN_NAME} {MyPluginInfo.PLUGIN_VERSION} loaded.");
@@ -32,6 +39,7 @@ namespace GleamFarmer
         private void Update()
         {
             GleamHost.Instance?.PumpDispatcher();
+            GleamHost.Instance?.PumpProjectSync();
         }
     }
 }
