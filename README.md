@@ -63,14 +63,13 @@ pub fn try_harvest_with(func: fn() -> Bool) {
 }
 
 pub fn try_harvest() {
-	try_harvest_with(fn() {})
+	try_harvest_with(fn() { True })
 }
 ```
 
 ```gleam
 //farm_carrots.gleam
 import game
-import gleam/list
 import utils
 
 pub fn main() {

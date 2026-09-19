@@ -26,15 +26,35 @@ Custom types:
 - `game.item.Item` — `Hay`, `Wood`, `Carrot`, `Pumpkin`, `Power`, `Gold`, `Bones`, `Water`, `Fertilizer`
 - `game.DroneHandle` — for `wait_for` / `has_finished`
 
-A first program:
+A first program, split across two windows — any open code window is an
+importable Gleam module:
+
+`utils.gleam`:
 
 ```
 import game
+import gleam/list
+
+pub fn visit_all(size: Int, do_work) {
+  use _ <- list.each(list.repeat(True, size))
+  game.move(game.East)
+  use _ <- list.each(list.repeat(True, size))
+  game.move(game.North)
+  do_work()
+}
+```
+
+`main.gleam`:
+
+```
+import game
+import utils
 
 pub fn main() {
-  game.harvest()
-  game.do_a_flip()
-  main()
+  utils.visit_all(3, fn() {
+    game.till()
+    game.plant(game.Carrot)
+  })
 }
 ```
 
