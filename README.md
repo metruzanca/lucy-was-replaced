@@ -89,6 +89,25 @@ pub fn main() {
 }
 ```
 
+## Feedback & roadmap
+
+This mod is brand new and still taking shape — your feedback decides what comes next.
+
+- **[GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions)** — the best
+  place for feedback, ideas, and questions. This is the primary channel.
+- **[GitHub Issues](https://github.com/metruzanca/tfwr-gleam/issues)** — for reporting bugs
+  (the bug report form asks a few quick questions).
+
+### Roadmap
+
+Right now the focus is collecting feedback from early players. Planned next:
+
+- **Auto-format your code on Run** — no more fighting the editor's indent keys.
+- **Beginner-friendly teaching content** for writing Gleam in-game.
+- **A custom leaderboard** so modded runs still have a way to be ranked.
+- **Polish and testing** of multi-drone, the in-game docs, and external-editor workflows.
+- **Anything players ask for** — say it in Discussions and it goes on the list.
+
 ## Installing
 
 The easiest way is with **r2modman**:
