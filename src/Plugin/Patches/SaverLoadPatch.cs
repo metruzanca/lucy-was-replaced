@@ -15,11 +15,16 @@ namespace GleamFarmer
         {
             var sync = GleamHost.Instance?.ProjectSync;
             if (sync == null || !sync.Enabled) return;
-            sync.EnsureScaffold();
-            // Project is canonical: apply external `.gleam` edits to the windows first,
-            // then write every window back so a fresh save populates the project.
-            sync.SeedWindowsFromProject();
-            sync.FlushWindows();
+            var createdFresh = sync.EnsureScaffold();
+            // Project is canonical. On a fresh project (first load after enabling the
+            // feature) populate it from the game's windows; on later loads apply the
+            // project back to the windows (opening/closing/renaming as needed). No
+            // unconditional flush — re-writing every window would resurrect `.gleam`
+            // files the player deleted externally.
+            if (createdFresh)
+                sync.FlushWindows();
+            else
+                sync.SeedWindowsFromProject();
         }
     }
 }

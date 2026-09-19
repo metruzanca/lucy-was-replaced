@@ -4,19 +4,22 @@ using System.IO;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using GleamRuntime;
+using UnityEngine;
 
 namespace GleamFarmer
 {
     /// <summary>
     /// Maintains the on-disk Gleam project (`&lt;save&gt;/gleam-project/`) that mirrors the
     /// game's code windows, so players can edit `.gleam` files in an external editor
-    /// with full Gleam LSP support. Three flows keep the two sides in sync:
+    /// with full Gleam LSP support. The project and the windows stay in sync in both
+    /// directions, including file creation/deletion/renaming:
     ///
     /// 1. Windows → files: <see cref="FlushWindows"/> writes every open window with a
     ///    valid module name to `src/&lt;name&gt;.gleam` (called on Run and on game save).
     /// 2. Files → windows: a <see cref="FileSystemWatcher"/> records external `.gleam`
     ///    edits; <see cref="Pump"/> (called every frame on the main thread) pushes them
-    ///    into the matching open window.
+    ///    into the matching open window, opens a new window for created files, closes
+    ///    the window for deleted files, and renames the window on a file rename.
     /// 3. On load, windows are seeded from the project files (project is canonical).
     ///
     /// The scaffolded project is a real Gleam package (`gleam.toml` + `manifest.toml`
@@ -31,9 +34,19 @@ namespace GleamFarmer
 
         private FileSystemWatcher? _watcher;
         private readonly object _lock = new();
-        private readonly HashSet<string> _changed = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, ChangeKind> _changed = new(StringComparer.Ordinal);
+        private readonly List<(string Old, string New)> _renames = new();
+        private readonly HashSet<string> _deletedExternally = new(StringComparer.Ordinal);
         private string? _projectDir;
         private volatile bool _flushing;
+
+        private enum ChangeKind
+        {
+            /// <summary>File created or modified (content should be pushed into a window).</summary>
+            Upsert,
+            /// <summary>File deleted (the matching window should be closed).</summary>
+            Delete,
+        }
 
         public GleamProjectSync(
             ManualLogSource log, string embeddedDir, ConfigEntry<bool> enabled)
@@ -50,19 +63,22 @@ namespace GleamFarmer
 
         /// <summary>
         /// Ensure the project exists for the active save and the file watcher is
-        /// pointed at it. Idempotent; safe to call from any thread.
+        /// pointed at it. Idempotent; safe to call from any thread. Returns true
+        /// when the project was created fresh (no src/ dir existed yet), which the
+        /// caller can use to decide whether to populate it from the game's windows.
         /// </summary>
-        public void EnsureScaffold()
+        public bool EnsureScaffold()
         {
-            if (!Enabled) return;
+            if (!Enabled) return false;
 
             var saveDir = ResolveSaveDir();
-            if (saveDir == null) return;
+            if (saveDir == null) return false;
 
             var projectDir = GleamProjectSource.ProjectDir(saveDir);
             try
             {
                 var srcDir = GleamProjectSource.SrcDir(projectDir);
+                var createdFresh = !Directory.Exists(srcDir);
                 Directory.CreateDirectory(srcDir);
                 Directory.CreateDirectory(Path.Combine(srcDir, "game"));
 
@@ -83,10 +99,12 @@ namespace GleamFarmer
                     StartWatcher(srcDir);
                     _projectDir = projectDir;
                 }
+                return createdFresh;
             }
             catch (Exception ex)
             {
                 _log.LogWarning($"GleamFarmer: could not scaffold Gleam project at {projectDir}: {ex.Message}");
+                return false;
             }
         }
 
@@ -106,6 +124,10 @@ namespace GleamFarmer
                     var name = pair.Key;
                     if (!GleamModuleNames.IsValidModuleName(name) || GleamModuleNames.IsReservedName(name))
                         continue;
+                    // A file the player deleted externally must not be resurrected by a
+                    // flush, even if its window is still open (e.g. mid-execution, where
+                    // Pump deliberately skips closing it).
+                    if (_deletedExternally.Contains(name)) continue;
                     var text = GetCodeText(pair.Value);
                     if (string.IsNullOrWhiteSpace(text)) continue;
                     var file = GleamProjectSource.ModuleFile(_projectDir, name);
@@ -125,7 +147,16 @@ namespace GleamFarmer
 
         /// <summary>
         /// Seed open windows from the project files (project is canonical). Called
-        /// after the game loads a save. Skips reserved names (e.g. the `game` stub).
+        /// after the game loads a save. Files that exist in the project but have no
+        /// window yet get one opened; existing windows get the file's content.
+        /// Skips reserved names (e.g. the `game` stub).
+        ///
+        /// Once the mirror is established (the project has at least one user module),
+        /// windows whose `.gleam` file is missing are closed too, so a file deleted
+        /// externally stays deleted (the game would otherwise re-open it from its
+        /// `.py` save and our flush would resurrect the `.gleam`). A fresh save with
+        /// no `.gleam` files yet is left untouched so its windows survive the first
+        /// load.
         /// </summary>
         public void SeedWindowsFromProject()
         {
@@ -134,15 +165,28 @@ namespace GleamFarmer
             var workspace = MainSim.Inst?.workspace;
             if (workspace?.codeWindows == null) return;
 
-            foreach (var module in GleamProjectSource.LoadModules(_projectDir))
+            var modules = GleamProjectSource.LoadModules(_projectDir);
+            foreach (var module in modules)
             {
-                if (!workspace.codeWindows.TryGetValue(module.Name, out var window)) continue;
-                SetCodeText(window, module.Code);
+                if (workspace.codeWindows.TryGetValue(module.Name, out var window))
+                    SetCodeText(window, module.Code);
+                else
+                    OpenWindow(workspace, module.Name, module.Code);
+            }
+
+            // Only prune missing files once the mirror is established.
+            if (modules.Count == 0) return;
+            foreach (var pair in workspace.codeWindows)
+            {
+                var name = pair.Key;
+                if (!IsTrackedModule(name)) continue;
+                if (!File.Exists(GleamProjectSource.ModuleFile(_projectDir, name)))
+                    CloseWindow(pair.Value);
             }
         }
 
         /// <summary>
-        /// Apply external `.gleam` edits to open windows. Called from the Unity main
+        /// Apply external `.gleam` edits to the game. Called from the Unity main
         /// thread each frame (<see cref="Plugin.Update"/>). Own-write suppression
         /// prevents feedback from <see cref="FlushWindows"/>.
         /// </summary>
@@ -150,29 +194,163 @@ namespace GleamFarmer
         {
             if (!Enabled || _projectDir == null) return;
 
-            string[] names;
+            List<(string Old, string New)> renames;
+            Dictionary<string, ChangeKind> changes;
             lock (_lock)
             {
-                if (_changed.Count == 0) return;
-                names = new string[_changed.Count];
-                _changed.CopyTo(names);
+                if (_changed.Count == 0 && _renames.Count == 0) return;
+                renames = new List<(string, string)>(_renames);
+                _renames.Clear();
+                changes = new Dictionary<string, ChangeKind>(_changed);
                 _changed.Clear();
             }
 
             var workspace = MainSim.Inst?.workspace;
             if (workspace?.codeWindows == null) return;
 
-            foreach (var name in names)
+            // Renames first: retitle the window, then reconcile content below.
+            foreach (var (oldName, newName) in renames)
             {
-                if (!GleamModuleNames.IsValidModuleName(name) || GleamModuleNames.IsReservedName(name))
-                    continue;
-                var file = GleamProjectSource.ModuleFile(_projectDir, name);
-                if (!File.Exists(file)) continue;
-                if (!workspace.codeWindows.TryGetValue(name, out var window)) continue;
+                if (!IsTrackedModule(oldName) || !IsTrackedModule(newName)) continue;
+                if (!workspace.codeWindows.TryGetValue(oldName, out var window)) continue;
+                try
+                {
+                    window.Rename(newName);
+                    var renamedFile = GleamProjectSource.ModuleFile(_projectDir, newName);
+                    if (File.Exists(renamedFile))
+                        SetCodeText(window, File.ReadAllText(renamedFile));
+                }
+                catch (Exception ex)
+                {
+                    _log.LogWarning($"GleamFarmer: could not rename window {oldName} -> {newName}: {ex.Message}");
+                }
+            }
 
-                var onDisk = File.ReadAllText(file);
-                if (GetCodeText(window) != onDisk)
-                    SetCodeText(window, onDisk);
+            foreach (var change in changes)
+            {
+                var name = change.Key;
+                var kind = change.Value;
+                if (!IsTrackedModule(name)) continue;
+                var file = GleamProjectSource.ModuleFile(_projectDir, name);
+                var windowExists = workspace.codeWindows.TryGetValue(name, out var window);
+
+                switch (kind)
+                {
+                    case ChangeKind.Upsert when File.Exists(file):
+                        _deletedExternally.Remove(name);
+                        var onDisk = File.ReadAllText(file);
+                        if (windowExists)
+                        {
+                            if (GetCodeText(window) != onDisk)
+                                SetCodeText(window, onDisk);
+                        }
+                        else
+                        {
+                            // Created externally: open a new code window.
+                            OpenWindow(workspace, name, onDisk);
+                        }
+                        break;
+                    case ChangeKind.Delete when windowExists:
+                        lock (_lock)
+                        {
+                            _deletedExternally.Add(name);
+                        }
+                        CloseWindow(window);
+                        break;
+                }
+            }
+        }
+
+        private static bool IsTrackedModule(string name) =>
+            GleamModuleNames.IsValidModuleName(name) && !GleamModuleNames.IsReservedName(name);
+
+        private void OpenWindow(Workspace workspace, string name, string code)
+        {
+            try
+            {
+                // Place near the view center, like the game's "new window" button.
+                workspace.OpenCodeWindow(name, code, -workspace.container.anchoredPosition);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"GleamFarmer: could not open window for {name}.gleam: {ex.Message}");
+            }
+        }
+
+        private void CloseWindow(CodeWindow window)
+        {
+            // Match the game's own guard: never close a window mid-execution.
+            if (window.isExecuting) return;
+            try
+            {
+                window.GetComponent<Window>().Close();
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"GleamFarmer: could not close window {window.fileName}: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Delete a module's file after its window is closed in-game, so the
+        /// project mirrors the game (closing a window removes the module).
+        /// </summary>
+        public void DeleteModuleFile(string windowName)
+        {
+            if (!Enabled || _projectDir == null) return;
+            if (!GleamModuleNames.IsValidModuleName(windowName) || GleamModuleNames.IsReservedName(windowName))
+                return;
+            var file = GleamProjectSource.ModuleFile(_projectDir, windowName);
+            if (!File.Exists(file)) return;
+            try
+            {
+                File.Delete(file);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"GleamFarmer: could not delete {windowName}.gleam: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// A code window was opened in-game (new window or via the game's own
+        /// open): clear any externally-deleted flag so the module's `.gleam` can
+        /// be re-created on the next flush.
+        /// </summary>
+        public void OnWindowOpenedInGame(string windowName)
+        {
+            if (!Enabled) return;
+            if (!GleamModuleNames.IsValidModuleName(windowName) || GleamModuleNames.IsReservedName(windowName))
+                return;
+            lock (_lock)
+            {
+                _deletedExternally.Remove(windowName);
+            }
+        }
+
+        /// <summary>
+        /// Rename a module's file when its window is renamed in-game, so the
+        /// project mirrors the game (an orphaned old file would otherwise
+        /// resurrect the old window on the next load).
+        /// </summary>
+        public void RenameModuleFile(string oldName, string newName)
+        {
+            if (!Enabled || _projectDir == null) return;
+            if (!GleamModuleNames.IsValidModuleName(oldName) || GleamModuleNames.IsReservedName(oldName) ||
+                !GleamModuleNames.IsValidModuleName(newName) || GleamModuleNames.IsReservedName(newName))
+                return;
+            var oldFile = GleamProjectSource.ModuleFile(_projectDir, oldName);
+            var newFile = GleamProjectSource.ModuleFile(_projectDir, newName);
+            if (!File.Exists(oldFile)) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(newFile)!);
+                if (File.Exists(newFile)) File.Delete(newFile);
+                File.Move(oldFile, newFile);
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning($"GleamFarmer: could not rename {oldName}.gleam -> {newName}.gleam: {ex.Message}");
             }
         }
 
@@ -213,22 +391,40 @@ namespace GleamFarmer
             }
         }
 
-        private void OnFileEvent(object sender, FileSystemEventArgs e) => RecordChange(e.Name);
-
-        private void OnRenamed(object sender, RenamedEventArgs e) => RecordChange(e.Name);
-
-        private void RecordChange(string? fileName)
+        private void OnFileEvent(object sender, FileSystemEventArgs e)
         {
-            if (fileName == null || !fileName.EndsWith(".gleam", StringComparison.OrdinalIgnoreCase))
-                return;
-            // Skip the LSP stubs we copy in ourselves, and our own flush writes.
-            var name = Path.GetFileNameWithoutExtension(fileName);
-            if (GleamModuleNames.IsReservedName(name)) return;
+            var kind = e.ChangeType == WatcherChangeTypes.Deleted ? ChangeKind.Delete : ChangeKind.Upsert;
+            RecordChange(e.Name, kind);
+        }
+
+        private void OnRenamed(object sender, RenamedEventArgs e)
+        {
+            var oldName = FileNameToModule(e.OldName);
+            var newName = FileNameToModule(e.Name);
+            if (oldName == null || newName == null) return;
             lock (_lock)
             {
                 if (_flushing) return;
-                _changed.Add(name);
+                _renames.Add((oldName, newName));
             }
+        }
+
+        private void RecordChange(string? fileName, ChangeKind kind)
+        {
+            var name = FileNameToModule(fileName);
+            if (name == null || GleamModuleNames.IsReservedName(name)) return;
+            lock (_lock)
+            {
+                if (_flushing) return;
+                _changed[name] = kind;
+            }
+        }
+
+        private static string? FileNameToModule(string? fileName)
+        {
+            if (fileName == null || !fileName.EndsWith(".gleam", StringComparison.OrdinalIgnoreCase))
+                return null;
+            return Path.GetFileNameWithoutExtension(fileName);
         }
 
         private void CopyIfMissing(string source, string dest)

@@ -133,6 +133,8 @@ How it stays in sync:
 - **In-game edits** are written to the project on Run and on every game save.
 - **External edits** are picked up by a file watcher and pushed into the open
   code window.
+- **Created/deleted/renamed files** create, close, or rename the matching code
+  window (and closing or renaming a window updates the project).
 - **Compiling reads the project**, so what the editor shows and what the game
   runs are the same bytes.
 
@@ -173,8 +175,9 @@ Notes:
 - Window names are module names: lowercase letters, digits and underscores only
   (`main`, `utils`, `farm_helper2`). Windows with invalid names aren't mirrored
   (the game's Python would refuse to import them too).
-- Modules can exist as `.gleam` files even without a matching open window; they
-  are importable from any window, and any window named after a module gets its
-  content when it opens.
+- **Create/delete/rename work both ways.** Create a `.gleam` file and it opens as
+  a code window; delete it and the window closes; rename it and the window follows.
+  Closing a window in-game deletes its `.gleam`, renaming one renames the file.
+  Files created while the game is closed appear as windows on the next load.
 - Toggle the feature off with the `ExternalProject` setting in the BepInEx
   config if you only want the in-game editor.
