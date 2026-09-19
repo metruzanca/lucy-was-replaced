@@ -69,7 +69,7 @@ pub fn main() {
       let _ = game.wait_for(b)
       let _ = game.wait_for(c)
     }
-    _ -> game.quick_print("no drones")
+    _ -> echo "no drones"
   }
 }
 
@@ -91,7 +91,8 @@ Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
 Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
 `plant`, `till`, `swap`, `clear`, `use_item`, `unlock`, `unlock_item`,
 `set_execution_speed`, `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`,
-`quick_print` (free). Sensors (instant): `get_pos`, `get_world_size`,
+`quick_print` (free). Logging: `io.println` (paced, like `print`) and `echo value`
+(free, like `quick_print`). Sensors (instant): `get_pos`, `get_world_size`,
 `get_entity_type`, `get_ground_type`, `get_water`, `measure`, `measure_at`,
 `get_companion`, `get_cost`, `num_items`, `num_unlocked`, `num_unlocked_item`,
 `num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`. Drones:

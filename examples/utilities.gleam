@@ -89,7 +89,7 @@ pub fn main() {
   game.do_a_flip()
   game.pet_the_piggy()
   game.change_hat("sombrero")
-  game.quick_print("free, unpaced print")
+  echo "free, unpaced print"
 
   game.clear()
   // start over

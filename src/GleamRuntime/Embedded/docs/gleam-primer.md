@@ -125,7 +125,7 @@ empty tile); `int.parse` and friends return results.
 
 ```gleam
 case game.measure() {
-  Some(growth) -> game.quick_print("growing")
+  Some(growth) -> echo "growing"
   None -> game.till()
 }
 

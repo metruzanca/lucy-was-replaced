@@ -127,14 +127,29 @@ namespace GleamRuntime
 
         public Module LoadModule(Engine engine, ResolvedSpecifier resolved)
         {
-            if (!_sources.TryGetValue(resolved.Key, out var source))
-                throw new ModuleResolutionException(
+            var source = ResolveSource(resolved.Key)
+                ?? throw new ModuleResolutionException(
                     $"Module not found: {resolved.Key}",
                     resolved.Key,
                     parent: null,
                     filePath: null);
 
             return ModuleFactory.BuildSourceTextModule(engine, resolved, source);
+        }
+
+        private string? ResolveSource(string key)
+        {
+            if (_sources.TryGetValue(key, out var source)) return source;
+
+            // Gleam's injected `echo` helper imports the stdlib dict module via its
+            // package-qualified path ("gleam_stdlib/gleam/dict.mjs"), but this project
+            // flattens the stdlib into the same package ("gleam/dict").
+            const string prefix = "gleam_stdlib/gleam/";
+            if (key.StartsWith(prefix, StringComparison.Ordinal) &&
+                _sources.TryGetValue(key.Substring(prefix.Length), out source))
+                return source;
+
+            return null;
         }
 
         private static string ResolveKey(string? referencingModuleLocation, string specifier)

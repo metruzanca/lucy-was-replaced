@@ -16,6 +16,14 @@ Every action is paced like the game's own interpreter: it costs ops and takes
 real time (speed upgrades scale it). Sensors return instantly. `get_time()`
 returns op-accounted execution time.
 
+Logging:
+
+- `io.println("...")` prints like the game's `print`: paced, with a bubble above
+  the drone and an op cost. Use `import gleam/io` first.
+- `echo value` prints instantly to the log — free, no op cost, no bubble (like
+  `game.quick_print`). `echo` is a Gleam keyword: it prints any value and
+  evaluates to that value. Output is prefixed with `file:line`.
+
 Custom types:
 
 - `game.Direction` — `North` / `East` / `South` / `West`
@@ -70,7 +78,7 @@ The game's Python has builtins that Gleam does not. Use the Gleam stdlib
 - `abs(n)` → `gleam/int.abs` / `gleam/float.abs`
 - `str(x)` → `gleam/string.inspect(x)`
 - `list` / `set` / `dict` → the `gleam/list`, `gleam/set`, `gleam/dict` modules
-- `print(...)` → `gleam/io.println` (paced); for free output use `game.quick_print`
+- `print(...)` → `gleam/io.println` (paced); for free output use `echo value`
 
 ## game.harvest
 
@@ -229,7 +237,7 @@ example:
 
 ```
 let pos = game.get_pos()
-game.quick_print("x: " <> int.to_string(pos.x))
+echo ("x: " <> int.to_string(pos.x))
 ```
 
 ## game.get_world_size
@@ -325,7 +333,7 @@ takes `0` ticks to execute.
 example:
 
 ```
-game.quick_print(int.to_string(game.get_tick_count()))
+echo int.to_string(game.get_tick_count())
 ```
 
 ## game.measure
@@ -341,7 +349,7 @@ example:
 
 ```
 case game.measure() {
-  Some(progress) -> game.quick_print(float.to_string(progress))
+  Some(progress) -> echo float.to_string(progress)
   None -> Nil
 }
 ```
@@ -358,7 +366,7 @@ example:
 
 ```
 case game.measure_at(game.North) {
-  Some(progress) -> game.quick_print(float.to_string(progress))
+  Some(progress) -> echo float.to_string(progress)
   None -> Nil
 }
 ```
@@ -378,7 +386,7 @@ example:
 ```
 case game.get_companion() {
   Some(companion) -> {
-    game.quick_print("needs a companion")
+    echo "needs a companion"
   }
   None -> Nil
 }
@@ -639,6 +647,9 @@ game.change_hat("dinosaur")
 Prints `text` to the output page without stopping to write it into the air —
 free, no op cost (unlike `gleam/io.println`).
 
+Gleam's `echo value` keyword does the same: free, unpaced output for any value
+(with a `file:line` prefix).
+
 takes `0` ticks to execute.
 
 example:
@@ -756,7 +767,7 @@ example:
 
 ```
 case game.wait_for(handle) {
-  Some(result) -> game.quick_print("done")
+  Some(result) -> echo "done"
   None -> Nil
 }
 ```
@@ -807,7 +818,7 @@ example:
 
 ```
 case game.receive() {
-  Some(message) -> game.quick_print("got something")
+  Some(message) -> echo "got something"
   None -> Nil
 }
 ```
@@ -824,7 +835,7 @@ example:
 
 ```
 case game.receive_from(0) {
-  Some(message) -> game.quick_print("got something")
+  Some(message) -> echo "got something"
   None -> Nil
 }
 ```

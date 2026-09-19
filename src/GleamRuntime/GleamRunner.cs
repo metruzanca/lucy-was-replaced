@@ -65,19 +65,19 @@ namespace GleamRuntime
                 foreach (var (name, _) in _stdlibModules)
                 {
                     var js = project.ReadCompiledJavascript(name);
-                    if (js != null) sources[name] = js;
+                    if (js != null) sources[name] = RewriteEcho(js);
                 }
                 foreach (var (name, _) in _extraModules)
                 {
                     var js = project.ReadCompiledJavascript(name);
-                    if (js != null) sources[name] = js;
+                    if (js != null) sources[name] = RewriteEcho(js);
                 }
                 if (userModules != null)
                 {
                     foreach (var (name, _) in userModules)
                     {
                         var js = project.ReadCompiledJavascript(name);
-                        if (js != null) sources[name] = js;
+                        if (js != null) sources[name] = RewriteEcho(js);
                     }
                 }
 
@@ -86,7 +86,7 @@ namespace GleamRuntime
                     throw new GleamCompileException(
                         $"The compiler produced no output for the entry module '{entryModuleName}'.");
 
-                sources[entryModuleName] = entryJs;
+                sources[entryModuleName] = RewriteEcho(entryJs);
                 sources[EntryModule] = EntrySource(entryModuleName);
 
                 return new CompiledGleam(sources);
@@ -99,6 +99,53 @@ namespace GleamRuntime
 
         private static string EntrySource(string entryModuleName) =>
             $"import {{ main }} from \"./{entryModuleName}.mjs\";\nmain();\n";
+
+        /// <summary>
+        /// The Gleam compiler injects a per-module `echo(value, message, file, line)`
+        /// helper (echo.mjs template) that writes to `process.stderr` / `Deno` / falls
+        /// back to `console.log` — which would funnel into the paced print handler. This
+        /// reroutes echo to the free `__gleam_host.quick_print` sink, keeping the value
+        /// inspection and `file:line\nvalue` format. No-op for modules that don't use
+        /// echo (the template is embedded verbatim by the pinned compiler).
+        /// </summary>
+        private static string RewriteEcho(string js)
+        {
+            const string marker = "function echo(value, message, file, line) {";
+            int fnStart = js.IndexOf(marker, StringComparison.Ordinal);
+            if (fnStart < 0) return js;
+
+            const string dispatch = "if (globalThis.process?.stderr?.write) {";
+            int start = js.IndexOf(dispatch, fnStart, StringComparison.Ordinal);
+            if (start < 0) return js;
+
+            // Scan to the matching close brace of the dispatch block (skipping the
+            // `else if` / `else` chain).
+            int depth = 0;
+            int end = start;
+            for (; end < js.Length; end++)
+            {
+                if (js[end] == '{') depth++;
+                else if (js[end] == '}')
+                {
+                    depth--;
+                    if (depth == 0)
+                    {
+                        end++;
+                        int peek = end;
+                        while (peek < js.Length && char.IsWhiteSpace(js[peek])) peek++;
+                        if (peek + 4 <= js.Length &&
+                            string.CompareOrdinal(js, peek, "else", 0, 4) == 0)
+                            continue;
+                        break;
+                    }
+                }
+            }
+            if (depth != 0) return js;
+
+            return js.Substring(0, start)
+                + "__gleam_host.quick_print(`${file_line}${string_message}\\n${string_value}`);"
+                + js.Substring(end);
+        }
 
         public void Dispose() => _compiler.Dispose();
     }

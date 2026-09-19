@@ -38,6 +38,23 @@ namespace GleamRuntime.Tests
         }
 
         [Fact]
+        public void EchoRoutesToQuickPrint()
+        {
+            var compiled = _fixture.Runner.Compile("""
+                pub fn main() {
+                  echo "hi"
+                  let _ = echo 42
+                  Nil
+                }
+                """);
+            var bridge = new StubGameBridge();
+            var result = compiled.Run(null, null, bridge);
+            Assert.True(result.IsOk, result.Error?.ToString());
+            Assert.Contains(bridge.Calls, c => c.StartsWith("quick_print(") && c.Contains("\"hi\""));
+            Assert.Contains(bridge.Calls, c => c.StartsWith("quick_print(") && c.Contains("42"));
+        }
+
+        [Fact]
         public void RecordsAndRecordUpdateWork()
         {
             var compiled = _fixture.Runner.Compile("""
