@@ -32,6 +32,10 @@ namespace GleamFarmer.Patches
             {
                 __result = "Game API";
             }
+            else if (key == "table_of_contents_section_programming")
+            {
+                __result = "Gleam Programming";
+            }
         }
     }
 }

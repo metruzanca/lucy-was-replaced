@@ -7,6 +7,7 @@ using Xunit;
 
 namespace GleamRuntime.Tests;
 
+[Collection("gleam")]
 public class GleamDocsTests
 {
     private static readonly Lazy<string> Reference = new(() =>

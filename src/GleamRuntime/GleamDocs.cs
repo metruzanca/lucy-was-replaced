@@ -76,45 +76,62 @@ namespace GleamRuntime
         public static string LabelFor(string pageId) => GetValue(Labels, pageId);
 
         /// <summary>
-        /// Resolve a dotted Gleam reference like "game.plant", "game.Carrot" or
-        /// "game.item.Hay" to its page id and label; null when unknown.
+        /// Resolve a dotted Gleam reference like "game.plant", "game.Carrot",
+        /// "game.item.Hay", "int.absolute_value" or a bare stdlib module like "list"
+        /// to its page id and label; null when unknown.
         /// </summary>
         public static (string Page, string Label)? LookupDotted(string word)
         {
-            if (string.IsNullOrEmpty(word) || !word.StartsWith("game", StringComparison.Ordinal))
-                return null;
+            if (string.IsNullOrEmpty(word)) return null;
 
-            if (word == "game")
+            if (word.StartsWith("game", StringComparison.Ordinal))
             {
-                return Pages.ContainsKey("game") ? ("game", "game") : null;
-            }
+                if (word == "game")
+                    return Pages.ContainsKey("game") ? ("game", "game") : null;
 
-            if (!word.StartsWith("game.", StringComparison.Ordinal))
-                return null;
+                if (word.StartsWith("game.item.", StringComparison.Ordinal))
+                {
+                    var item = word.Substring("game.item.".Length).ToLowerInvariant();
+                    var itemPage = ItemNames.Contains(item) ? "items/" + item : "functions/" + item;
+                    return Pages.ContainsKey(itemPage)
+                        ? (itemPage, GetValue(Labels, itemPage, word))
+                        : null;
+                }
 
-            if (word.StartsWith("game.item.", StringComparison.Ordinal))
-            {
-                var item = word.Substring("game.item.".Length).ToLowerInvariant();
-                var itemPage = ItemNames.Contains(item) ? "items/" + item : "functions/" + item;
-                return Pages.ContainsKey(itemPage)
-                    ? (itemPage, GetValue(Labels, itemPage, word))
+                var name = word.Substring("game.".Length).ToLowerInvariant();
+                string page;
+                if (EntityNames.Contains(name) || GroundNames.Contains(name))
+                    page = "objects/" + name;
+                else if (DirectionNames.Contains(name))
+                    page = "directions/" + name;
+                else
+                    page = "functions/" + name;
+                return Pages.ContainsKey(page)
+                    ? (page, GetValue(Labels, page, word))
                     : null;
             }
 
-            var name = word.Substring("game.".Length).ToLowerInvariant();
-            string page;
-            if (EntityNames.Contains(name) || GroundNames.Contains(name))
-                page = "objects/" + name;
-            else if (DirectionNames.Contains(name))
-                page = "directions/" + name;
-            else
-                page = "functions/" + name;
-            return Pages.ContainsKey(page)
-                ? (page, GetValue(Labels, page, word))
-                : null;
+            // Gleam stdlib: "int", "int.absolute_value", ...
+            if (IsStdlibModule(word))
+                return Pages.ContainsKey("functions/gleam_" + word)
+                    ? ("functions/gleam_" + word, word)
+                    : null;
+            if (TryStdlibFunction(word, out var module, out var function))
+            {
+                var stdlibPage = "functions/gleam_" + module + "_" + function;
+                return Pages.ContainsKey(stdlibPage)
+                    ? (stdlibPage, word)
+                    : null;
+            }
+
+            return null;
         }
 
-        /// <summary>Ordered TOC entries for the builtins section, overview first.</summary>
+        /// <summary>
+        /// Ordered TOC entries for the builtins section, overview first, then the game
+        /// functions. The Gleam stdlib/primer live in their own docs-window section
+        /// (<see cref="PrimerToc"/> / <see cref="StdlibToc"/>).
+        /// </summary>
         public static List<(string Label, string Page, string Gate)> Builtins()
         {
             var entries = new List<(string, string, string)>();
@@ -122,10 +139,79 @@ namespace GleamRuntime
             {
                 if (page == "game")
                     entries.Add(("game module", "game", ""));
-                else if (page.StartsWith("functions/", StringComparison.Ordinal))
+                else if (page.StartsWith("functions/", StringComparison.Ordinal)
+                         && !page.StartsWith("functions/gleam_", StringComparison.Ordinal))
                     entries.Add((Labels[page], page, GetValue(Gates, page)));
             }
             return entries;
+        }
+
+        /// <summary>
+        /// Numbered primer list for the docs-window "Gleam stdlib" section (the numbers are
+        /// literal text — the game's markdown renderer has no ordered-list support).
+        /// </summary>
+        public static string PrimerToc()
+        {
+            var sb = new System.Text.StringBuilder();
+            var number = 1;
+            foreach (var page in Order)
+            {
+                if (!page.StartsWith("functions/gleam_primer_", StringComparison.Ordinal)) continue;
+                var label = GetValue(Labels, page);
+                if (label.StartsWith("primer:", StringComparison.Ordinal))
+                    label = label.Substring("primer:".Length);
+                sb.Append(number++).Append(". [").Append(label).Append("](").Append(page).Append(")\n");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Stdlib module links for the docs-window "Gleam stdlib" section.</summary>
+        public static string StdlibToc()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var module in GleamStdlibDocs.CuratedModules)
+            {
+                var page = "functions/gleam_" + module;
+                if (Pages.ContainsKey(page))
+                    sb.Append('[').Append(module).Append("](").Append(page).Append(")      ");
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>Bare member names for a stdlib module's autocomplete domain ("int.", "list.", …).</summary>
+        public static List<string> StdlibMembers(string module)
+        {
+            var members = new List<string>();
+            var prefix = "functions/gleam_" + module + "_";
+            foreach (var page in Order)
+            {
+                if (page.StartsWith(prefix, StringComparison.Ordinal))
+                    members.Add(page.Substring(prefix.Length));
+            }
+            return members;
+        }
+
+        private static bool IsStdlibModule(string name) =>
+            Array.IndexOf(GleamStdlibDocs.CuratedModules, name) >= 0;
+
+        private static bool TryStdlibFunction(string title, out string module, out string function)
+        {
+            module = "";
+            function = "";
+            var dot = title.IndexOf('.');
+            if (dot <= 0) return false;
+            module = title.Substring(0, dot);
+            function = title.Substring(dot + 1);
+            return IsStdlibModule(module) && function.Length > 0;
+        }
+
+        /// <summary>Lowercase, spaces/dashes -> underscores (for doc page ids).</summary>
+        private static string Slug(string text)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var ch in text.Trim())
+                sb.Append(char.IsLetterOrDigit(ch) ? char.ToLowerInvariant(ch) : '_');
+            return sb.ToString();
         }
 
         /// <summary>Ordered TOC entries for the entities section.</summary>
@@ -238,6 +324,18 @@ namespace GleamRuntime
             if (title == "game module")
             {
                 page = "game";
+            }
+            else if (title.StartsWith("primer:", StringComparison.Ordinal))
+            {
+                page = "functions/gleam_primer_" + Slug(title.Substring("primer:".Length));
+            }
+            else if (IsStdlibModule(title))
+            {
+                page = "functions/gleam_" + title;
+            }
+            else if (TryStdlibFunction(title, out var stdlibModule, out var function))
+            {
+                page = "functions/gleam_" + stdlibModule + "_" + function;
             }
             else if (title.StartsWith("game.item.", StringComparison.Ordinal))
             {

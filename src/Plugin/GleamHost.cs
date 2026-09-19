@@ -77,11 +77,19 @@ namespace GleamFarmer
                 };
                 var extraModules = GleamStdlib.LoadGameModules(embedded);
 
-                var docsPath = Path.Combine(embedded, "docs", "game-reference.md");
-                if (File.Exists(docsPath))
+                var docsPath = Path.Combine(embedded, "docs");
+                var gameRef = Path.Combine(docsPath, "game-reference.md");
+                var primer = Path.Combine(docsPath, "gleam-primer.md");
+                if (File.Exists(gameRef))
                 {
-                    GleamDocs.Parse(File.ReadAllText(docsPath));
-                    Log.LogInfo($"GleamFarmer: in-game reference loaded ({GleamDocs.Builtins().Count} game functions).");
+                    // One combined reference: the game.* library, the beginner primer,
+                    // and the stdlib pages extracted at runtime from the embedded sources.
+                    var combined = new System.Text.StringBuilder(File.ReadAllText(gameRef));
+                    if (File.Exists(primer))
+                        combined.Append("\n\n").Append(File.ReadAllText(primer));
+                    combined.Append("\n\n").Append(GleamStdlibDocs.Generate(stdlib));
+                    GleamDocs.Parse(combined.ToString());
+                    Log.LogInfo($"GleamFarmer: in-game reference loaded ({GleamDocs.Builtins().Count} entries).");
                 }
                 else
                 {

@@ -8,11 +8,38 @@ namespace GleamFarmer.Patches
     /// In Gleam mode the docs-window table of contents lists the <c>game.*</c> library
     /// instead of the game's Python builtins/Entities/Items/Grounds. Entries keep the
     /// game's unlock gating (same keys), and the "builtins" section gains a leading
-    /// overview entry.
+    /// overview entry. The home page's "Programming" section (Python scripting links)
+    /// is replaced with the Gleam primer + stdlib pages; its heading is renamed to
+    /// "Gleam Programming" via the Localizer patch.
     /// </summary>
     [HarmonyPatch(typeof(MarkdownText))]
     public static class MarkdownTextTocPatch
     {
+        [HarmonyPatch(nameof(MarkdownText.Setup))]
+        [HarmonyPrefix]
+        public static void HomePrefix(ref string text)
+        {
+            if (!Enabled() || text == null) return;
+            // Only the docs-window home/TOC page carries the builtins TOC placeholder.
+            if (text.IndexOf("builtinsTOC", System.StringComparison.Ordinal) < 0) return;
+
+            // Replace the base game's "Programming" section content (Python scripting
+            // links) with the Gleam primer list + stdlib pages. The section heading is
+            // renamed to "Gleam Programming" by LocalizerDocsPatch.
+            const string marker = "## {{@table_of_contents_section_programming}}";
+            var heading = text.IndexOf(marker, System.StringComparison.Ordinal);
+            if (heading < 0) return;
+            var contentStart = text.IndexOf('\n', heading);
+            if (contentStart < 0) return;
+            contentStart++; // past the heading's newline
+
+            var contentEnd = text.IndexOf("\n## ", contentStart, System.StringComparison.Ordinal);
+            if (contentEnd < 0) contentEnd = text.Length;
+
+            var gleam = "\n" + GleamDocs.PrimerToc() + "\n" + GleamDocs.StdlibToc();
+            text = text.Substring(0, contentStart) + gleam + text.Substring(contentEnd);
+        }
+
         [HarmonyPatch(nameof(MarkdownText.GenerateBuiltinsTOC))]
         [HarmonyPostfix]
         public static void Builtins(ref string __result)

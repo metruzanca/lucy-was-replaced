@@ -226,6 +226,30 @@ mode they now show the `game.*` library (`game.plant(game.Carrot)`).
       signatures present, overview maps Python builtins, dotted lookups + autocomplete
 - [ ] In-game validation: docs window, hover, autocomplete all read as `game.*`
 
+### M10.5 — Gleam stdlib + primer docs in-game ✅ COMPLETE
+Extends the M10 surfaces to the stdlib and to beginner guides.
+- `GleamStdlibDocs` (GleamRuntime) extracts the curated modules (`bool`, `dict`, `float`,
+  `function`, `int`, `list`, `option`, `order`, `pair`, `result`, `set`, `string`) from the
+  embedded `.gleam` sources at runtime — module overview (leading `////` doc) + per-function
+  pages (`///` doc + signature). Undocumented `pub fn`s are omitted; nested `## ` demoted to
+  `### ` so the section split stays intact; bodyless `@external` signatures handled.
+- `docs/gleam-primer.md`: ~6 beginner sections adapted from tour.gleam.run (Expressions,
+  Functions, Case expressions, Records, Pipelines/`use`, Option/Result) — Apache-2.0.
+- `GleamDocs`: `AddSection` maps primer/stdlib titles to `functions/gleam_*` page ids;
+  `LookupDotted` resolves bare `int.absolute_value` / `list.map`; `Builtins()` stays
+  game-only; `PrimerToc()` / `StdlibToc()` render a separate **"Gleam stdlib"** home-page
+  section (numbered primer list first, then the module pages) via a `MarkdownText.Setup`
+  prefix; `StdlibMembers()` drives autocomplete.
+- Patches: `CodeWindowDocsPatch` offers the 12 module names + `int.`/`list.`/… subword
+  domains (user-window shadowing respected); `LocalizerDocsPatch` serves
+  `code_tooltip_gleam_*`/`_gleam_primer_*` (page ids `functions/gleam_*` flow through the
+  existing `FunctionDoc` path unchanged).
+- Tests (12): curated modules have overviews + autocomplete domains, documented functions
+  get pages with signatures, `### Examples` demotion, dotted lookups, TOC resolves, primer
+  sections loaded. Doc test classes now share the `gleam` collection (static `GleamDocs`
+  state must not be mutated in parallel).
+- [ ] In-game validation: `int.` autocomplete + hover tooltips + primer pages in the docs window
+
 ---
 
 ## Decisions (locked)
