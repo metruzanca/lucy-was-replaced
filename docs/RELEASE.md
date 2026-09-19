@@ -73,6 +73,14 @@ Checks:
 - `Embedded/gleam_wasm_bg.wasm`, `Embedded/stdlib/`, `Embedded/game.gleam`,
   `Embedded/game/`, `Embedded/prelude.mjs`, `Embedded/game_ffi.mjs` present.
 
+> **Why the four `System.*` facades are bundled:** `System.Memory`,
+> `System.Buffers`, `System.Runtime.CompilerServices.Unsafe` and
+> `System.Numerics.Vectors` are real dependencies (Acornima + Wasmtime) and the
+> game's Mono ships **none** of them in `TheFarmerWasReplaced_Data/Managed/` —
+> removing them breaks loading. Thunderstore's "some .dll files may be
+> unnecessary" warning is a false positive here; `System.ValueTuple` *was*
+> redundant (the game's mscorlib provides it) and is not bundled.
+
 ### 4. Validate against a clean install
 
 The most reliable check is the minimal DLL set in the live game:
