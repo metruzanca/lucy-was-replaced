@@ -20,12 +20,13 @@ pub fn main() {
 - Run a Gleam file headless: `./scripts/run-gleam.sh examples/<name>.gleam`
 - Hot-reload into the game: `./scripts/push-to-game-save.sh examples/<name>.gleam gleam`
 - Build the Thunderstore package: `mise release` (project `mise.toml` task → `scripts/release.sh`)
-- Package + GitHub release: `mise release-gh` (builds, then creates/updates the `v<version>` release)
+- Package + GitHub release: `mise release-gh` (builds, then creates/updates the `v<version>` release; the release body is the `CHANGELOG.md` entry for that version)
 
 ## Commits (Conventional Commits)
 
 Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) so
-`mise release-gh`'s `gh release create --generate-notes` produces a useful changelog.
+git history stays readable and the auto-generated release notes are sensible (used only when
+a version has no `CHANGELOG.md` entry yet).
 
 Format: `<type>(<scope>): <subject>`
 
