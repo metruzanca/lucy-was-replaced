@@ -35,8 +35,8 @@ namespace GleamRuntime
         long get_tick_count();
 
         // ---- utilities ----
-        double? measure();
-        double? measure_at(int direction);
+        int[]? measure();               // [value] or [x, y], or null when unmeasurable
+        int[]? measure_at(int direction);
         int[]? get_companion();         // [entityCode, x, y] or null
         int[] get_cost(int entity);     // flat [itemId, count, ...] pairs
         double random();
@@ -63,6 +63,17 @@ namespace GleamRuntime
 
         /// <summary>Override for `get_companion` (null by default → None).</summary>
         public int[]? CompanionResult { get; set; }
+
+        /// <summary>Override for `measure`. Unset → [12]; null → None.</summary>
+        public int[]? MeasureResult { get; set; }
+        private bool _measureOverridden;
+
+        /// <summary>Set an explicit override for `measure` (null → None).</summary>
+        public void SetMeasure(int[]? result)
+        {
+            MeasureResult = result;
+            _measureOverridden = true;
+        }
 
         /// <summary>
         /// When set, action calls account their standard op cost into this
@@ -94,8 +105,8 @@ namespace GleamRuntime
         public long get_tick_count() { Record("get_tick_count()"); return Ops?.TotalOps ?? 0; }
 
         // ---- utilities (canned, deterministic) ----
-        public double? measure() { Record("measure()"); return 1.5; }
-        public double? measure_at(int direction) { Record($"measure_at({direction})"); return null; }
+        public int[]? measure() { Record("measure()"); return _measureOverridden ? MeasureResult : new[] { 12 }; } // sunflower petal count
+        public int[]? measure_at(int direction) { Record($"measure_at({direction})"); return null; }
         public int[]? get_companion() { Record("get_companion()"); return CompanionResult; }
         public int[] get_cost(int entity) { Record($"get_cost({entity})"); return new[] { 3, 2, 8, 1 }; } // [(Carrot,2),(Water,1)]
         public double random() { Record("random()"); return 0.5; }

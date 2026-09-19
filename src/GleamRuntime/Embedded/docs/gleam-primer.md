@@ -103,7 +103,7 @@ reading left-to-right instead of inside-out:
 ```gleam
 "  42  "
 |> string.trim()
-|> string.to_int()
+|> int.parse()
 ```
 
 `use` runs a function with a continuation. `use <- list.each(list, ...)` runs
@@ -124,9 +124,9 @@ The `game` sensors return options (`get_entity_type()` can be `None` on an
 empty tile); `int.parse` and friends return results.
 
 ```gleam
-case game.measure() {
-  Some(growth) -> echo "growing"
-  None -> game.till()
+case game.get_entity_type() {
+  Some(_) -> echo "something is growing"
+  None -> echo "empty"
 }
 
 case int.parse("42") {

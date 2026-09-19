@@ -246,19 +246,29 @@ namespace GleamFarmer
 
         // ---- utility sensors (instant) ----
 
-        public double? measure() => OnMain((sim, drone) =>
+        public int[]? measure() => OnMain((sim, drone) =>
             MeasureOf(drone.EntityUnderDrone()?.Measure()));
 
-        public double? measure_at(int direction) => OnMain((sim, drone) =>
+        public int[]? measure_at(int direction) => OnMain((sim, drone) =>
         {
             var dir = (GridDirection)direction;
             var key = sim.farm.grid.Wrap(drone.pos + dir.GetDirectionVector());
-            if (!sim.farm.grid.entities.TryGetValue(key, out var entity)) return (double?)null;
+            if (!sim.farm.grid.entities.TryGetValue(key, out var entity)) return (int[]?)null;
             return MeasureOf(entity.Measure());
         });
 
-        private static double? MeasureOf(object? value) =>
-            value is PyNumber number ? (double)number : (double?)null;
+        // Measure returns an int (sunflower petals, cactus size, pumpkin number) or a
+        // position tuple (treasure/maze/apple). Both are flattened to int[] so Gleam can
+        // decode them; null = unmeasurable (base FarmObject.Measure returns null).
+        private static int[]? MeasureOf(object? value) =>
+            value switch
+            {
+                PyNumber number => new[] { (int)(double)number },
+                PyTuple tuple when tuple.Count == 2
+                    && tuple[0] is PyNumber x && tuple[1] is PyNumber y =>
+                    new[] { (int)(double)x, (int)(double)y },
+                _ => null,
+            };
 
         public int[]? get_companion() => OnMain<int[]?>((sim, drone) =>
         {

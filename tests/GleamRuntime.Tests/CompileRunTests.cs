@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using GleamRuntime;
 using Xunit;
 
@@ -216,7 +217,9 @@ namespace GleamRuntime.Tests
 
                 pub fn main() {
                   case game.measure() {
-                    Some(v) -> io.println("measure:" <> float.to_string(v))
+                    Some(game.MeasureValue(v)) -> io.println("measure:" <> int.to_string(v))
+                    Some(game.MeasurePosition(pos)) ->
+                      io.println("measure:pos:" <> int.to_string(pos.x) <> "," <> int.to_string(pos.y))
                     None -> io.println("measure:none")
                   }
                   case game.get_companion() {
@@ -236,7 +239,7 @@ namespace GleamRuntime.Tests
 
             Assert.True(result.IsOk, result.Error?.ToString());
             Assert.Equal(
-                new[] { "measure:1.5", "companion:none", "pos:0,0", "cost:2", "random:0.5" },
+                new[] { "measure:12", "companion:none", "pos:0,0", "cost:2", "random:0.5" },
                 sink.Output);
         }
 
@@ -270,6 +273,45 @@ namespace GleamRuntime.Tests
 
             Assert.True(result.IsOk, result.Error?.ToString());
             Assert.Equal("companion:3@2,5", Assert.Single(sink.Output)); // Carrot at (2, 5)
+        }
+
+        [Fact]
+        public void MeasureDecodesValueAndPosition()
+        {
+            var compiled = _fixture.Runner.Compile("""
+                import gleam/io
+                import gleam/int
+                import gleam/option.{None, Some}
+                import game
+
+                pub fn main() {
+                  case game.measure() {
+                    Some(game.MeasureValue(petals)) -> io.println("petals:" <> int.to_string(petals))
+                    Some(game.MeasurePosition(pos)) ->
+                      io.println("pos:" <> int.to_string(pos.x) <> "," <> int.to_string(pos.y))
+                    None -> io.println("none")
+                  }
+                }
+                """);
+
+            var valueBridge = new StubGameBridge();
+            valueBridge.SetMeasure(new[] { 10 });
+            var positionBridge = new StubGameBridge();
+            positionBridge.SetMeasure(new[] { 3, 7 });
+            var noneBridge = new StubGameBridge();
+            noneBridge.SetMeasure(null);
+
+            Assert.Equal("petals:10", Assert.Single(Run(compiled, valueBridge)));
+            Assert.Equal("pos:3,7", Assert.Single(Run(compiled, positionBridge)));
+            Assert.Equal("none", Assert.Single(Run(compiled, noneBridge)));
+        }
+
+        private static List<string> Run(CompiledGleam compiled, StubGameBridge bridge)
+        {
+            var sink = new CapturingSink();
+            var result = compiled.Run(sink, null, bridge);
+            Assert.True(result.IsOk, result.Error?.ToString());
+            return sink.Output;
         }
 
         [Fact]

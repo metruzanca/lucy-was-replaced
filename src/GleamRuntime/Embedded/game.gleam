@@ -39,6 +39,14 @@ pub type Position {
   Position(x: Int, y: Int)
 }
 
+/// The value `measure()` returns. A `MeasureValue` is an entity-specific number
+/// (sunflower petals, cactus size, pumpkin number); a `MeasurePosition` is the
+/// position of a treasure (in a maze) or an apple's next position.
+pub type Measure {
+  MeasureValue(value: Int)
+  MeasurePosition(position: Position)
+}
+
 /// The companion a growable needs nearby.
 pub type Companion {
   Companion(entity: Entity, position: Position)
@@ -196,23 +204,27 @@ pub fn clear() -> Nil
 @external(javascript, "./game_ffi.mjs", "measure")
 fn measure_code() -> Dynamic
 
-/// Growth progress of the entity on the current tile, if it has one.
+/// Measures the entity on the current tile. The value depends on the entity:
+/// `MeasureValue` for a sunflower's petal count, a cactus's size, or a
+/// pumpkin's number; `MeasurePosition` for a treasure's position.
 /// Returns `None` when the tile is empty or the entity cannot be measured.
-pub fn measure() -> Option(Float) {
-  case decode.run(measure_code(), decode.float) {
-    Ok(value) -> Some(value)
-    Error(_) -> None
+pub fn measure() -> Option(Measure) {
+  case decode.run(measure_code(), decode.list(of: decode.int)) {
+    Ok([value]) -> Some(MeasureValue(value: value))
+    Ok([x, y]) -> Some(MeasurePosition(position: Position(x: x, y: y)))
+    _ -> None
   }
 }
 
 @external(javascript, "./game_ffi.mjs", "measure_at_code")
 fn measure_at_code(direction: Int) -> Dynamic
 
-/// Growth progress of the entity on the adjacent tile.
-pub fn measure_at(direction: Direction) -> Option(Float) {
-  case decode.run(measure_at_code(direction_code(direction)), decode.float) {
-    Ok(value) -> Some(value)
-    Error(_) -> None
+/// Measures the entity on the adjacent tile in `direction`.
+pub fn measure_at(direction: Direction) -> Option(Measure) {
+  case decode.run(measure_at_code(direction_code(direction)), decode.list(of: decode.int)) {
+    Ok([value]) -> Some(MeasureValue(value: value))
+    Ok([x, y]) -> Some(MeasurePosition(position: Position(x: x, y: y)))
+    _ -> None
   }
 }
 

@@ -10,7 +10,7 @@ headings into the game's doc pages.
 `import game` gives typed access to the world: the drone, the farm, movement,
 planting, harvesting, sensors, and utilities (swap, clear, measure, costs,
 progression, cosmetics). Items live in a second module: `import game/item`,
-then `game.item.num_items(game.item.Hay)`.
+then `item.num_items(item.Hay)`.
 
 Every action is paced like the game's own interpreter: it costs ops and takes
 real time (speed upgrades scale it). Sensors return instantly. `get_time()`
@@ -30,6 +30,7 @@ Custom types:
 - `game.Entity` — `Grass`, `Bush`, `Carrot`, `Pumpkin`, `Sunflower`, `Tree`, `Cactus`, `Treasure`, `Hedge`
 - `game.Ground` — `Soil` / `Grassland`
 - `game.Position` — `Position(x: Int, y: Int)`
+- `game.Measure` — `MeasureValue(value: Int)` / `MeasurePosition(position: game.Position)`
 - `game.Companion` — `Companion(entity: game.Entity, position: game.Position)`
 - `game.item.Item` — `Hay`, `Wood`, `Carrot`, `Pumpkin`, `Power`, `Gold`, `Bones`, `Water`, `Fertilizer`
 - `game.DroneHandle` — for `wait_for` / `has_finished`
@@ -112,7 +113,10 @@ example:
 
 ```
 case game.can_harvest() {
-  True -> game.harvest()
+  True -> {
+    let _ = game.harvest()
+    Nil
+  }
   False -> Nil
 }
 ```
@@ -171,7 +175,10 @@ example:
 
 ```
 case game.can_move(game.North) {
-  True -> game.move(game.North)
+  True -> {
+    let _ = game.move(game.North)
+    Nil
+  }
   False -> Nil
 }
 ```
@@ -237,7 +244,7 @@ example:
 
 ```
 let pos = game.get_pos()
-echo ("x: " <> int.to_string(pos.x))
+echo "x: " <> int.to_string(pos.x)
 ```
 
 ## game.get_world_size
@@ -266,7 +273,10 @@ example:
 
 ```
 case game.get_entity_type() {
-  Some(game.Grass) -> game.harvest()
+  Some(game.Grass) -> {
+    let _ = game.harvest()
+    Nil
+  }
   _ -> Nil
 }
 ```
@@ -299,8 +309,11 @@ takes `1` tick to execute.
 example:
 
 ```
-case game.get_water() < 0.5 {
-  True -> game.item.use_item(game.item.Water)
+case game.get_water() <=. 0.5 {
+  True -> {
+    let _ = item.use_item(item.Water)
+    Nil
+  }
   False -> Nil
 }
 ```
@@ -338,10 +351,15 @@ echo int.to_string(game.get_tick_count())
 
 ## game.measure
 
-`game.measure() -> Option(Float)`
+`game.measure() -> Option(game.Measure)`
 
-Growth progress of the entity on the current tile, as a value between `0` and
-`1`. Returns `None` when the tile is empty or the entity cannot be measured.
+Measures the entity on the current tile. The value depends on the entity:
+
+- `Some(game.MeasureValue(n))` — a number: a sunflower's petal count, a
+  cactus's size, or a pumpkin's mysterious number.
+- `Some(game.MeasurePosition(position))` — the position of a treasure (the
+  gold is hidden at that position in the maze).
+- `None` — the tile is empty or the entity cannot be measured.
 
 takes `1` tick to execute.
 
@@ -349,16 +367,24 @@ example:
 
 ```
 case game.measure() {
-  Some(progress) -> echo float.to_string(progress)
+  Some(game.MeasureValue(petals)) -> {
+    let _ = echo "sunflower with " <> int.to_string(petals) <> " petals"
+    Nil
+  }
+  Some(game.MeasurePosition(position)) -> {
+    let _ = echo "treasure at " <> int.to_string(position.x)
+    Nil
+  }
   None -> Nil
 }
 ```
 
 ## game.measure_at
 
-`game.measure_at(direction: game.Direction) -> Option(Float)`
+`game.measure_at(direction: game.Direction) -> Option(game.Measure)`
 
-Growth progress of the entity on the adjacent tile in `direction`.
+Measures the entity on the adjacent tile in `direction`, with the same values
+as `game.measure()`.
 
 takes `1` tick to execute.
 
@@ -366,7 +392,14 @@ example:
 
 ```
 case game.measure_at(game.North) {
-  Some(progress) -> echo float.to_string(progress)
+  Some(game.MeasureValue(petals)) -> {
+    let _ = echo "north has " <> int.to_string(petals) <> " petals"
+    Nil
+  }
+  Some(game.MeasurePosition(position)) -> {
+    let _ = echo "treasure at " <> int.to_string(position.x)
+    Nil
+  }
   None -> Nil
 }
 ```
@@ -385,8 +418,9 @@ example:
 
 ```
 case game.get_companion() {
-  Some(companion) -> {
-    echo "needs a companion"
+  Some(_) -> {
+    let _ = echo "needs a companion"
+    Nil
   }
   None -> Nil
 }
@@ -394,7 +428,7 @@ case game.get_companion() {
 
 ## game.get_cost
 
-`game.get_cost(entity: game.Entity) -> List(#(game.item.Item, Int))`
+`game.get_cost(entity: game.Entity) -> List(#(item.Item, Int))`
 
 The seed (or item) cost of growing `entity`, as `(item, count)` pairs.
 
@@ -431,8 +465,11 @@ takes `1` tick to execute.
 example:
 
 ```
-case game.item.num_items(game.item.Fertilizer) > 0 {
-  True -> game.item.use_item(game.item.Fertilizer)
+case item.num_items(item.Fertilizer) > 0 {
+  True -> {
+    let _ = item.use_item(item.Fertilizer)
+    Nil
+  }
   False -> Nil
 }
 ```
@@ -442,8 +479,8 @@ case game.item.num_items(game.item.Fertilizer) > 0 {
 `game.item.use_item(item: game.item.Item) -> Bool`
 
 Attempts to use `item` once (e.g. watering one unit). Works with items like
-`game.item.Water` and `game.item.Fertilizer`. For a larger amount at once use
-`game.item.use_items(item, count)`.
+`item.Water` and `item.Fertilizer`. For a larger amount at once use
+`item.use_items(item, count)`.
 
 returns `True` if an item was used, `False` otherwise.
 
@@ -452,7 +489,7 @@ takes `200` ticks to execute if it succeeded, `1` tick otherwise.
 example:
 
 ```
-let _ = game.item.use_item(game.item.Water)
+let _ = item.use_item(item.Water)
 ```
 
 ## game.item.use_items
@@ -468,7 +505,7 @@ takes `200` ticks to execute if it succeeded, `1` tick otherwise.
 example:
 
 ```
-let _ = game.item.use_items(game.item.Water, 3)
+let _ = item.use_items(item.Water, 3)
 ```
 
 ## game.item.unlock_item
@@ -484,7 +521,7 @@ takes `200` ticks to execute if it succeeded, `1` tick otherwise.
 example:
 
 ```
-let _ = game.item.unlock_item(game.item.Carrot)
+let _ = item.unlock_item(item.Carrot)
 ```
 
 ## game.item.num_unlocked_item
@@ -498,7 +535,7 @@ takes `1` tick to execute.
 example:
 
 ```
-let level = game.item.num_unlocked_item(game.item.Carrot)
+let level = item.num_unlocked_item(item.Carrot)
 ```
 
 ## game.unlock
@@ -569,10 +606,10 @@ let level = game.num_unlocked_by_name("mazes")
 `game.set_execution_speed(speed: Float) -> Nil`
 
 Limits the speed at which the program is executed to better see what's
-happening. `1` is the speed without upgrades; `8` is the speed of the drone
-after `3` speed upgrades; `0.5` runs at half speed. A faster-than-maximum
-speed just runs at max. `0` or negative resets to max speed. The effect stops
-when the execution stops.
+happening. `1` is the speed without upgrades; `10` makes the code execute `10`
+times faster (the speed of the drone after `9` speed upgrades); `0.5` runs at
+half speed. A faster-than-maximum speed just runs at max. `0` or negative
+resets to max speed. The effect stops when the execution stops.
 
 takes `200` ticks to execute.
 
@@ -726,7 +763,7 @@ example:
 
 ```
 pub fn worker() -> Dynamic {
-  game.harvest()
+  dynamic.bool(game.harvest())
 }
 
 pub fn main() {
@@ -734,6 +771,7 @@ pub fn main() {
   case handles {
     [handle, ..] -> {
       let _ = game.wait_for(handle)
+      Nil
     }
     _ -> Nil
   }
@@ -767,7 +805,10 @@ example:
 
 ```
 case game.wait_for(handle) {
-  Some(result) -> echo "done"
+  Some(_) -> {
+    let _ = echo "done"
+    Nil
+  }
   None -> Nil
 }
 ```
@@ -786,6 +827,7 @@ example:
 case game.has_finished(handle) {
   True -> {
     let _ = game.wait_for(handle)
+    Nil
   }
   False -> Nil
 }
@@ -818,7 +860,10 @@ example:
 
 ```
 case game.receive() {
-  Some(message) -> echo "got something"
+  Some(_) -> {
+    let _ = echo "got something"
+    Nil
+  }
   None -> Nil
 }
 ```
@@ -835,7 +880,10 @@ example:
 
 ```
 case game.receive_from(0) {
-  Some(message) -> echo "got something"
+  Some(_) -> {
+    let _ = echo "got something"
+    Nil
+  }
   None -> Nil
 }
 ```
@@ -1042,7 +1090,7 @@ Gathered by harvesting grass.
 example:
 
 ```
-let n = game.num_items(game.item.Hay)
+let n = item.num_items(item.Hay)
 ```
 
 ## game.item.Wood
@@ -1054,7 +1102,7 @@ Gathered by harvesting bushes and trees.
 example:
 
 ```
-let n = game.num_items(game.item.Wood)
+let n = item.num_items(item.Wood)
 ```
 
 ## game.item.Carrot
@@ -1066,7 +1114,7 @@ Gathered by harvesting carrots.
 example:
 
 ```
-let n = game.num_items(game.item.Carrot)
+let n = item.num_items(item.Carrot)
 ```
 
 ## game.item.Pumpkin
@@ -1078,7 +1126,7 @@ Gathered by harvesting pumpkins.
 example:
 
 ```
-let n = game.num_items(game.item.Pumpkin)
+let n = item.num_items(item.Pumpkin)
 ```
 
 ## game.item.Power
@@ -1090,7 +1138,7 @@ Gathered by harvesting sunflowers.
 example:
 
 ```
-let n = game.num_items(game.item.Power)
+let n = item.num_items(item.Power)
 ```
 
 ## game.item.Gold
@@ -1102,7 +1150,7 @@ Gathered by harvesting treasure in mazes.
 example:
 
 ```
-let n = game.num_items(game.item.Gold)
+let n = item.num_items(item.Gold)
 ```
 
 ## game.item.Bones
@@ -1114,29 +1162,29 @@ Gathered from dinosaurs in mazes.
 example:
 
 ```
-let n = game.num_items(game.item.Bones)
+let n = item.num_items(item.Bones)
 ```
 
 ## game.item.Water
 
 `game.item.Water : game.item.Item`
 
-Used with `game.item.use_item` to water crops.
+Used with `item.use_item` to water crops.
 
 example:
 
 ```
-let _ = game.item.use_item(game.item.Water)
+let _ = item.use_item(item.Water)
 ```
 
 ## game.item.Fertilizer
 
 `game.item.Fertilizer : game.item.Item`
 
-Used with `game.item.use_item` to speed up crop growth.
+Used with `item.use_item` to speed up crop growth.
 
 example:
 
 ```
-let _ = game.item.use_item(game.item.Fertilizer)
+let _ = item.use_item(item.Fertilizer)
 ```

@@ -1,6 +1,6 @@
 //! Game items (inventory).
 //!
-//! `import game/item` then `game.item.num_items(game.item.Water)`.
+//! `import game/item` then `item.num_items(item.Water)`.
 
 import gleam/option.{type Option, None, Some}
 

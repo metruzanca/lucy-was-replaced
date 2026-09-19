@@ -20,8 +20,8 @@ export function num_items_code(item) { return __gleam_host.num_items(item); }
 export function use_item_code(item, count) { return __gleam_host.use_item(item, count); }
 export function get_time() { return __gleam_host.get_time(); }
 export function get_tick_count() { return __gleam_host.get_tick_count(); }
-export function measure() { return __gleam_host.measure(); }
-export function measure_at_code(direction) { return __gleam_host.measure_at(direction); }
+export function measure() { const v = __gleam_host.measure(); return v === null || v === undefined ? null : Array.from(v); }
+export function measure_at_code(direction) { const v = __gleam_host.measure_at(direction); return v === null || v === undefined ? null : Array.from(v); }
 export function get_companion() { const v = __gleam_host.get_companion(); return v === null ? null : Array.from(v); }
 export function get_cost_code(entity) { return Array.from(__gleam_host.get_cost(entity)); }
 export function random() { return __gleam_host.random(); }

@@ -54,11 +54,11 @@ import game/item       // item.num_items, item.use_item, item.use_items
 game.till()
 game.plant(game.Carrot)
 game.move(game.North)
-game.item.num_items(game.item.Hay)
+item.num_items(item.Hay)
 let pos = game.get_pos()          // game.Position(x, y)
 game.swap(game.East)              // move the tile's entity to the adjacent tile
 game.clear()                      // wipe the farm
-game.measure()                    // growth progress of the current tile
+game.measure()                    // petal count / cactus size / treasure position
 game.get_cost(game.Carrot)        // seed cost as items
 game.unlock(game.Carrot)          // spend resources to unlock an entity
 game.unlock_by_name("multi_trade")

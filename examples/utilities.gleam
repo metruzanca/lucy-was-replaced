@@ -6,7 +6,6 @@
 import game
 import game/item
 import gleam/bool
-import gleam/float
 import gleam/int
 import gleam/io
 import gleam/list
@@ -50,8 +49,10 @@ pub fn main() {
     <> int.to_string(game.max_drones()),
   )
   case game.measure() {
-    Some(progress) -> io.println("growth: " <> float.to_string(progress))
-    None -> io.println("growth: none")
+    Some(game.MeasureValue(petals)) -> io.println("petals: " <> int.to_string(petals))
+    Some(game.MeasurePosition(position)) ->
+      io.println("treasure at: " <> int.to_string(position.x) <> "," <> int.to_string(position.y))
+    None -> io.println("measure: none")
   }
   case game.get_companion() {
     Some(companion) ->
