@@ -93,9 +93,9 @@ pub fn main() {
 
 This mod is brand new and still taking shape — your feedback decides what comes next.
 
-- **[GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions)** — the best
+- **[GitHub Discussions](https://github.com/metruzanca/lucy-was-replaced/discussions)** — the best
   place for feedback, ideas, and questions. This is the primary channel.
-- **[GitHub Issues](https://github.com/metruzanca/tfwr-gleam/issues)** — for reporting bugs
+- **[GitHub Issues](https://github.com/metruzanca/lucy-was-replaced/issues)** — for reporting bugs
   (the bug report form asks a few quick questions).
 
 ### Roadmap

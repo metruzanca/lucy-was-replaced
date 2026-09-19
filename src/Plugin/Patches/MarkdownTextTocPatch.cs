@@ -40,8 +40,8 @@ namespace GleamFarmer.Patches
 
             var gleam = "\n" + GleamDocs.PrimerToc() + "\n" + GleamDocs.StdlibToc()
                 + "\n\n## Feedback\n\n"
-                + "[GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions) — feedback, ideas, questions\n\n"
-                + "[GitHub Issues](https://github.com/metruzanca/tfwr-gleam/issues) — report a bug\n\n";
+                + "[GitHub Discussions](https://github.com/metruzanca/lucy-was-replaced/discussions) — feedback, ideas, questions\n\n"
+                + "[GitHub Issues](https://github.com/metruzanca/lucy-was-replaced/issues) — report a bug\n\n";
             text = text.Substring(0, contentStart) + gleam + text.Substring(contentEnd);
         }
 

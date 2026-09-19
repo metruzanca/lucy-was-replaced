@@ -30,7 +30,7 @@ cat > "$pkg/manifest.json" <<JSON
 {
   "name": "Lucy_Was_Replaced",
   "version_number": "$version",
-  "website_url": "https://github.com/metruzanca/tfwr-gleam",
+  "website_url": "https://github.com/metruzanca/lucy-was-replaced",
   "description": "Replace The Farmer Was Replaced's Python editor with the Gleam language.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305"

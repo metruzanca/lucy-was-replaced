@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for taking the time to report a bug. Please fill in the details
         below so it can be reproduced and fixed. For ideas, feedback, or
-        questions please use [GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions)
+        questions please use [GitHub Discussions](https://github.com/metruzanca/lucy-was-replaced/discussions)
         instead — that's the preferred place for those.
   - type: input
     id: mod_version
