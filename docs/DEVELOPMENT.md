@@ -96,18 +96,20 @@ world (actions serialize on the main thread). `game.send(message, drone_id)` /
 `game.spawn_drone_with` lets a worker return a value for `game.wait_for`.
 
 Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
-`game.Companion` (from `get_companion`), `game.item.Item`, `game.DroneHandle`.
+`game.Measure` (from `measure`/`measure_at`), `game.Companion` (from `get_companion`),
+`game.item.Item`, `game.DroneHandle`.
 
 Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
-`plant`, `till`, `swap`, `clear`, `use_item`, `unlock`, `unlock_item`,
-`set_execution_speed`, `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`,
-`quick_print` (free). Logging: `io.println` (paced, like `print`) and `echo value`
-(free, like `quick_print`). Sensors (instant): `get_pos`, `get_world_size`,
-`get_entity_type`, `get_ground_type`, `get_water`, `measure`, `measure_at`,
-`get_companion`, `get_cost`, `num_items`, `num_unlocked`, `num_unlocked_item`,
-`num_drones`, `max_drones`, `random`, `get_time`, `get_tick_count`. Drones:
-`spawn_drone`, `spawn_drone_with`, `get_drone_id`, `wait_for`, `has_finished`, `send`,
-`receive`, `receive_from`.
+`plant`, `till`, `swap`, `clear`, `unlock`, `unlock_by_name`, `set_execution_speed`,
+`set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`, `quick_print` (free).
+Logging: `io.println` (paced, like `print`) and `echo value` (free, like
+`quick_print`). Sensors (instant): `get_pos`, `get_world_size`, `get_entity_type`,
+`get_ground_type`, `get_water`, `measure`, `measure_at`, `get_companion`, `get_cost`,
+`random`, `num_unlocked`, `num_unlocked_by_name`, `num_drones`, `max_drones`,
+`get_time`, `get_tick_count`. Items (`import game/item`): `item.num_items`,
+`item.use_item`, `item.use_items`, `item.unlock_item`, `item.num_unlocked_item`.
+Drones: `spawn_drone`, `spawn_drone_with`, `get_drone_id`, `wait_for`, `has_finished`,
+`send`, `receive`, `receive_from`.
 
 ## Environment
 
@@ -147,11 +149,3 @@ floating print bubbles above the drone.
   shipped for external-editor projects.
 - `examples/` — runnable Gleam scripts.
 - `docs/` — research notes (game internals, wasm compiler ABI, runtime decision).
-
-## Status
-
-- M0–M3: interpreter pipeline replaced; plugin runs Gleam in-game; highlighting; external
-  `.gleam`/`.py` hot-reload; headless CLI.
-- M4: paced `game` FFI — movement + planting verified in-game; sensors built on the same
-  mapping. M4-3 adds the full utility builtin set (swap, clear, measure, costs, unlock,
-  drones, cosmetics) with 9/9 headless tests. See `gleamfarmer.plan.md` for the checklist.

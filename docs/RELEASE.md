@@ -136,7 +136,7 @@ The package zip is already Thunderstore-compatible (`manifest.json`, `README.md`
 - [ ] Assets fetched (`fetch-game-assets.sh`, `fetch-stdlib.sh`)
 - [ ] Version bumped in `GleamFarmer.csproj`
 - [ ] `mise release`
-- [ ] Zip inspected (12 DLLs, Embedded present, no game assemblies)
+- [ ] Zip inspected (11 DLLs, Embedded present, no game assemblies)
 - [ ] Headless tests pass
 - [ ] Clean-install in-game smoke test passes
 - [ ] Zip uploaded / shared with `docs/INSTALL.md`

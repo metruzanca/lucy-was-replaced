@@ -26,8 +26,8 @@ Source paths are embedded in the DLLs (PBD-style), so the original layout is kno
   (patchable, as `enhanced-python` does)
 
 > NOTE: this current build renamed the interpreter class (`Interpreter` → `Execution`).
-> The `tfwr-modding/enhanced-python` mod (2024) targets an older build. Decompile the
-> current `Core.dll` with ilspycmd during M0 to pin exact signatures before patching.
+> The `tfwr-modding/enhanced-python` mod (2024) targets an older build. The signatures
+> below were pinned against the decompiled `Core.dll` (see `docs/decompiled/`).
 
 ## PyTypes (`Assets/Scripts/Utils/PyTypes/`, in `Utils.dll`)
 `PyObject` base + `PyNumber, PyString, PyBool, PyList, PyTuple, PyDict, PySet, PyRange,
@@ -44,7 +44,9 @@ Community references:
 Do NOT drive the game's Python pipeline. Instead:
 1. Harmony-patch the run entry so pressing Run/Execute compiles `CodeWindow.codeText`
    (Gleam) with the embedded WASM compiler → JavaScript.
-2. Execute that JS in Jint, bridging game verbs through a `tfwr` FFI module
-   (M4: backed by publicized `Core.dll` farm/grid/inventory state).
+2. Execute that JS in Jint, bridging game verbs through a `game` FFI module backed by
+   publicized `Core.dll` farm/grid/inventory state.
 3. Patch `CodeUtilities.colors` for Gleam-aware syntax highlighting.
 4. Surface output/errors in the game's console / `Plugin.Log`.
+
+All four are implemented in `src/Plugin/Patches/` + `RealGameBridge.cs`.
