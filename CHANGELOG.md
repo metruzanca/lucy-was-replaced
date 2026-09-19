@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A new color theme: switch to **Gleam** under Settings → color theme and the editor is
+  tinted with the Gleam brand — pink functions, blue records and types, yellow strings,
+  and a deep navy background.
 - Watch your program run: the editor highlights the line currently executing, just like
   the game's own Python editor. It moves fast in normal runs — that's the point.
 - Slow things down and really read your code: the step-by-step button now works for

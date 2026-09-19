@@ -146,6 +146,8 @@ namespace GleamFarmer
                     Log.LogWarning($"GleamFarmer: missing in-game reference: {docsPath}");
                 }
 
+                InstallGleamTheme(embedded);
+
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);
                 Instance.ProjectSync = new GleamProjectSync(Log, embedded, externalProject);
@@ -154,6 +156,36 @@ namespace GleamFarmer
             catch (Exception ex)
             {
                 Log.LogError($"GleamFarmer failed to initialise: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Bundle the Gleam-branded editor theme into the game's theme folder so it shows up
+        /// under Settings → color theme. Runs on the Unity main thread from Plugin.Awake; the
+        /// game's own ThemeManager.OnEnable rescan picks it up if the manager isn't started yet
+        /// (ThemeManager.Inst is null), otherwise we hot-reload it in place.
+        /// </summary>
+        private static void InstallGleamTheme(string embedded)
+        {
+            try
+            {
+                var source = Path.Combine(embedded, "themes", "Gleam.tfwrTheme");
+                if (!File.Exists(source))
+                {
+                    Log.LogWarning($"GleamFarmer: missing bundled theme: {source}");
+                    return;
+                }
+
+                var themesDir = Path.Combine(Helper.persistentDataPath, "Themes");
+                Directory.CreateDirectory(themesDir);
+                var dest = Path.Combine(themesDir, "Gleam.tfwrTheme");
+                File.Copy(source, dest, overwrite: true);
+                ThemeManager.Inst?.ReloadJsonThemes();
+                Log.LogInfo("GleamFarmer: installed the Gleam editor theme.");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"GleamFarmer: failed to install the Gleam editor theme: {ex.Message}");
             }
         }
 

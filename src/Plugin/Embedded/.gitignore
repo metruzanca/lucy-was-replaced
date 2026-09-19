@@ -2,3 +2,5 @@
 !.gitignore
 !project-template/
 !project-template/**
+!themes/
+!themes/**
