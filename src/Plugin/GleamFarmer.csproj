@@ -53,6 +53,7 @@
     <Copy SourceFiles="@(PluginDlls)" DestinationFolder="$(PluginOut)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="@(EmbeddedFiles)" DestinationFiles="$(PluginOut)/Embedded/%(RecursiveDir)%(Filename)%(Extension)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(PkgWasmtime)runtimes/win-x64/native/wasmtime.dll" DestinationFolder="$(PluginOut)" Condition="Exists('$(PkgWasmtime)runtimes/win-x64/native/wasmtime.dll')" />
+    <Copy SourceFiles="../../NOTICE.md" DestinationFiles="$(PluginOut)/THIRD_PARTY_NOTICES.md" SkipUnchangedFiles="true" />
   </Target>
 
   <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">

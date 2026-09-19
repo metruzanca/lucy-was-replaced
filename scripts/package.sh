@@ -69,6 +69,8 @@ cp "$repo_root/assets/icon.png" "$pkg/icon.png"
 cp "$repo_root/CHANGELOG.md" "$pkg/CHANGELOG.md"
 # Manual-install guide travels with the plugin (kept out of the game root).
 cp "$repo_root/docs/INSTALL.md" "$plug/"
+# Third-party notices (documented name in INSTALL.md / RELEASE.md).
+cp "$repo_root/NOTICE.md" "$plug/THIRD_PARTY_NOTICES.md"
 # The in-game Gleam reference, so manual-install players can read it next to the guide.
 cp "$repo_root/src/GleamRuntime/Embedded/docs/game-reference.md" "$plug/game-reference.md"
 
