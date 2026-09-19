@@ -50,6 +50,20 @@ Rules:
 - Prefer the standard types over repo-historical prefixes: `feat` (not `feature`),
   `build` (not `pkg`/`release`), `chore` (not `tooling`), `docs` (not `plan`).
 
+## Player-facing docs (README & CHANGELOG)
+
+The GitHub README **is** the Thunderstore page — `scripts/package.sh` copies `README.md`
+and `CHANGELOG.md` into every release bundle. Keep them in sync by editing only the repo
+files; never edit the copy in a bundle. Write both for the player:
+
+- **Non-technical and approachable.** Assume a beginner programmer who may never have
+  heard of Gleam. No internal architecture, library names, or build details (no WASM,
+  Jint, Harmony, "the bridge", "op-accounted", package scripts, …).
+- **Changelog is user-experience-driven.** Entries describe what the player sees or feels
+  in the game, never how it's implemented. Good: "Code windows stay in sync with a real
+  Gleam project on disk, so your editor gets full autocomplete and error checking." Bad:
+  "Added GleamProjectSync files→windows sync." Same rule applies to the README.
+
 ## In-game flow & debugging
 
 - The plugin auto-stages into the game dir on build (`StagePlugin` target):
