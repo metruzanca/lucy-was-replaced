@@ -9,7 +9,8 @@ namespace GleamFarmer.Patches
         /// In Gleam mode autocomplete offers the <c>game</c> module and the Gleam stdlib
         /// modules: typing <c>game.</c> completes functions/constants, <c>game.item.</c>
         /// completes item members, and <c>int.</c> / <c>list.</c> / … complete stdlib
-        /// functions. Bare Python builtin names are dropped from the base word list.
+        /// functions. The game's Python keywords (and <c>__name__</c>) are dropped from the
+        /// base word list.
         /// </summary>
         [HarmonyPatch(typeof(CodeWindow))]
         public static class CodeWindowDocsPatch
@@ -20,7 +21,10 @@ namespace GleamFarmer.Patches
             {
                 if (GleamHost.Instance == null || !GleamHost.Instance.Enabled) return;
 
-                __result.RemoveAll(w => BuiltinFunctions.Functions.ContainsKey(w));
+                __result.RemoveAll(w =>
+                    BuiltinFunctions.Functions.ContainsKey(w)
+                    || Farm.allKeyWords.Contains(w)
+                    || w == "__name__");
                 if (!__result.Contains("game"))
                     __result.Add("game");
                 foreach (var module in GleamStdlibDocs.CuratedModules)
