@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
 - A new color theme: switch to **Gleam** under Settings → color theme and the editor is
   tinted with the Gleam brand — pink functions, blue records and types, yellow strings,
