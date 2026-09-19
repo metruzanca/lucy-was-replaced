@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0
+
+- The in-game help now speaks Gleam: the docs window, hover tooltips, and autocomplete
+  show the `game.*` functions you actually write, plus a quick tour of the Gleam language
+  and the built-in helpers.
+- Edit your code in your favorite editor: every code window is mirrored to a real Gleam
+  project on disk, so you get full autocomplete, hover, and error checking from VS Code,
+  Neovim, or any editor with Gleam support. Create, rename, or delete a window and the
+  files follow — and vice versa.
+- `echo` now prints to the game's output panel, just like `quick_print`.
+- The editor no longer suggests Python keywords — it's Gleam from the start.
+- A clearer error when you run an empty program, and a more helpful first program to
+  start from.
+- Installing is simpler: r2modman is now the recommended way, with a separate guide for
+  manual installs.
+- The in-game help screen links to the GitHub project — use Discussions for feedback and
+  ideas, and Issues to report bugs.
+
 ## 0.1.0
 
 Initial release.
