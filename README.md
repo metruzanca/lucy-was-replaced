@@ -89,42 +89,13 @@ pub fn main() {
 
 ## Installing
 
-(Awaiting approval on thunderstore for easy installs via r2modman/similar)
+The easiest way is with **r2modman**:
 
-Extract the zip into the game folder with BepInEx 5 installed. Detailed steps are in [docs/INSTALL.md](docs/INSTALL.md) (also included in the package).
+1. Install [r2modman](https://thunderstore.io/c/the-farmer-was-replaced/p/ebkr/r2modman/)
+   and pick *The Farmer Was Replaced* as the game.
+2. In the mod browser, search for **Lucy Was Replaced** and install it.
+   BepInEx is pulled in automatically.
+3. Launch the game through r2modman and press **Run** in any code window.
 
-
-- **Install BepInEx 5 x64.**
-   Download the latest `BepInEx_win_x64_5.4.x.zip` from the
-   [BepInEx releases](https://github.com/BepInEx/BepInEx/releases) page (the x64
-   build, not x86).
-   Extract it **into the game folder** so that `winhttp.dll` and the `BepInEx/`
-   folder sit right next to `TheFarmerWasReplaced.exe`:
-2. **Install the mod.**
-   Extract `GleamFarmer-<version>.zip` into the game folder and merge the
-   `BepInEx/` folder when prompted. You should end up with:
-
-   ```
-   BepInEx/plugins/GleamFarmer/
-     GleamFarmer.dll
-     GleamRuntime.dll
-     Jint.dll
-     … (other DLLs)
-     Embedded/   (compiler wasm, Gleam stdlib, game module)
-     INSTALL.md
-     THIRD_PARTY_NOTICES.md
-   ```
-
-3. **Launch the game.** The BepInEx console/log (`BepInEx/LogOutput.log`) should
-   show `Lucy was Replaced <version> loaded.`
-4. **Run Gleam.** In any code window, write a program and press **Run**:
-
-   ```gleam
-   import game
-
-   pub fn main() {
-     game.harvest()
-     game.do_a_flip()
-     main()
-   }
-   ```
+Prefer to do it by hand? Follow the manual install steps in
+[docs/INSTALL.md](docs/INSTALL.md) (also included in the package).
