@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Feedback, ideas & questions
+    url: https://github.com/metruzanca/tfwr-gleam/discussions
+    about: The preferred place for anything that isn't a clear bug — feature ideas, suggestions, and questions all go here.
+  - name: Roadmap
+    url: https://github.com/metruzanca/tfwr-gleam/blob/main/README.md#roadmap
+    about: Planned features and improvements. Request a spot on the list via Discussions.

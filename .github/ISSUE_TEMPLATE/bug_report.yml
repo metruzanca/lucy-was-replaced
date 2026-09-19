@@ -1,0 +1,54 @@
+name: Bug report
+description: Something isn't working as expected in the game
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in the details
+        below so it can be reproduced and fixed. For ideas, feedback, or
+        questions please use [GitHub Discussions](https://github.com/metruzanca/tfwr-gleam/discussions)
+        instead — that's the preferred place for those.
+  - type: input
+    id: mod_version
+    attributes:
+      label: Mod version
+      description: Version of Lucy was Replaced you're using (e.g. 0.2.0)
+    validations:
+      required: true
+  - type: input
+    id: game_version
+    attributes:
+      label: Game version
+      description: The Farmer Was Replaced version (visible in the game's main menu)
+    validations:
+      required: true
+  - type: input
+    id: install_method
+    attributes:
+      label: How did you install it?
+      description: r2modman, Thunderstore Mod Manager, or manual (BepInEx)
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What went wrong?
+      description: What did you expect to happen, and what actually happened? Include the Gleam code if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open a code window and run...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Optional but very helpful — the BepInEx log lives at `<game>/BepInEx/LogOutput.log`. Paste any relevant error text.
+      render: shell
