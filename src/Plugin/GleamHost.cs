@@ -207,10 +207,13 @@ namespace GleamFarmer
                 // The main-thread dispatcher wraps game-side failures in an AggregateException;
                 // unwrap to the real error so the player sees the actual cause, not the wrapper.
                 var real = Unwrap(error);
+                // The BepInEx log keeps the full exception for debugging; the code
+                // window gets a player-facing version (e.g. the `todo` placeholder
+                // is explained instead of dumped as a Jint stack trace).
                 Log.LogError($"GleamFarmer: runtime error: {real}");
                 _dispatcher.Invoke(() =>
                 {
-                    ShowError(window, real.ToString());
+                    ShowError(window, GleamErrors.Describe(real));
                     return true;
                 });
             }
