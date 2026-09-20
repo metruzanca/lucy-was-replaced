@@ -121,6 +121,25 @@ Right now the focus is collecting feedback from early players. Planned next:
 - **Polish and testing** of multi-drone, the in-game docs, and external-editor workflows.
 - **Anything players ask for** — say it in Discussions and it goes on the list.
 
+## AI disclosure
+
+Let me be upfront: this mod was written with a lot of help from AI coding agents.
+The main tool is **Opencode**, running the Deepseek v4 Flash model. The process
+is plan first, build second, then refine — each feature gets thought through,
+written, and iterated over several rounds, with plenty of hands-on testing in
+the real game along the way.
+
+It's not a case of handing a prompt to a bot and shipping whatever comes back.
+I've been writing code since 2014 and working as a programmer since 2019 —
+professionally in C# (2019–2021) and JavaScript (2020–today), and Gleam for fun.
+Could I have built this mod without AI? Absolutely. Would it have taken months
+instead of days? Also yes. The AI handles a lot of the work; the engineering is
+mine.
+
+These details are also embedded in the mod's assembly metadata
+(`AI_Assisted_Creation`, `AI_Model_Vendor`, `AI_Model`), per Thunderstore's
+rules on AI-generated content: https://wiki.thunderstore.io/llms-and-ai-generated-files.
+
 ## Installing
 
 The easiest way is with **r2modman**:

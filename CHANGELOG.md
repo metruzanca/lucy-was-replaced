@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- A clear disclosure that this mod is built with heavy help from AI coding
+  agents. It's on the mod page and embedded in the package itself, so it's
+  always visible how the mod was made.
+
 ## 0.3.0
 
 - A new color theme: switch to **Gleam** under Settings → color theme and the editor is
