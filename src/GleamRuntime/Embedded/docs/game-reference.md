@@ -10,7 +10,8 @@ headings into the game's doc pages.
 `import game` gives typed access to the world: the drone, the farm, movement,
 planting, harvesting, sensors, and utilities (swap, clear, measure, costs,
 progression, cosmetics). Items live in a second module: `import game/item`,
-then `item.num_items(item.Hay)`.
+then `item.num_items(item.Hay)`. The research tree lives in a third: `import
+game/unlock`, then `unlock.unlock(unlock.Megafarm)`.
 
 Every action is paced like the game's own interpreter: it costs ops and takes
 real time (speed upgrades scale it). Sensors return instantly. `get_time()`
@@ -29,10 +30,12 @@ Custom types:
 - `game.Direction` — `North` / `East` / `South` / `West`
 - `game.Entity` — `Grass`, `Bush`, `Carrot`, `Pumpkin`, `Sunflower`, `Tree`, `Cactus`, `Treasure`, `Hedge`
 - `game.Ground` — `Soil` / `Grassland`
+- `game.Hat` — `StrawHat`, `DinosaurHat`, `GreenHat`, `GrayHat`, `PurpleHat`, `BrownHat`, `WizardHat`, `TopHat`, `TrafficCone`, `TrafficConeStack`, `PumpkinHat`, `CarrotHat`, `CactusHat`, `SunflowerHat`, `GoldHat`, `GoldenGoldHat`, `TreeHat`, `GoldTrophyHat`, `SilverTrophyHat`, `WoodTrophyHat`, `GoldenCactusHat`, `GoldenCarrotHat`, `GoldenPumpkinHat`, `GoldenSunflowerHat`, `GoldenTreeHat`, `TheFarmersRemains`
 - `game.Position` — `Position(x: Int, y: Int)`
 - `game.Measure` — `MeasureValue(value: Int)` / `MeasurePosition(position: game.Position)`
 - `game.Companion` — `Companion(entity: game.Entity, position: game.Position)`
 - `game.item.Item` — `Hay`, `Wood`, `Carrot`, `Pumpkin`, `Power`, `Gold`, `Bones`, `Water`, `Fertilizer`
+- `game.unlock.Unlock` — `AutoUnlock`, `Cactus`, `Carrots`, `Costs`, `Debug`, `Debug2`, `Dictionaries`, `Dinosaurs`, `Expand`, `Fertilizer`, `Functions`, `Grass`, `Hats`, `Import`, `Leaderboard`, `Lists`, `Loops`, `Mazes`, `Megafarm`, `Operators`, `Plant`, `Polyculture`, `Pumpkins`, `Senses`, `Simulation`, `Speed`, `Sunflowers`, `TheFarmersRemains`, `Timing`, `TopHat`, `Trees`, `Utilities`, `Variables`, `Watering`
 - `game.DroneHandle` — for `wait_for` / `has_finished`
 
 A first program, split across two windows — any open code window is an
@@ -555,12 +558,13 @@ example:
 let _ = game.unlock(game.Carrot)
 ```
 
-## game.unlock_by_name
+## game.unlock.unlock
 
-`game.unlock_by_name(name: String) -> Bool`
+`game.unlock.unlock(unlock: game.unlock.Unlock) -> Bool`
 
-Spend resources to unlock anything by its unlock name (e.g. `"multi_trade"`),
-when there is no `game` type for it.
+Spend resources to unlock (or upgrade) a feature in the research tree, e.g.
+`unlock.Megafarm` or `unlock.Carrots`. Has exactly the same effect as clicking
+the button in the research tree.
 
 returns `True` if the unlock was successful, `False` otherwise.
 
@@ -569,7 +573,26 @@ takes `200` ticks to execute if it succeeded, `1` tick otherwise.
 example:
 
 ```
-let _ = game.unlock_by_name("multi_trade")
+import game/unlock
+
+let _ = unlock.unlock(unlock.Megafarm)
+```
+
+## game.unlock.num_unlocked
+
+`game.unlock.num_unlocked(unlock: game.unlock.Unlock) -> Int`
+
+How many times an unlock has been bought (`0` = not unlocked). For upgradeable
+unlocks this is `1` plus the number of upgrades.
+
+takes `1` tick to execute.
+
+example:
+
+```
+import game/unlock
+
+let level = unlock.num_unlocked(unlock.Mazes)
 ```
 
 ## game.num_unlocked
@@ -585,20 +608,6 @@ example:
 
 ```
 let level = game.num_unlocked(game.Bush)
-```
-
-## game.num_unlocked_by_name
-
-`game.num_unlocked_by_name(name: String) -> Int`
-
-How many times an unlock name has been bought (`0` = not unlocked).
-
-takes `1` tick to execute.
-
-example:
-
-```
-let level = game.num_unlocked_by_name("mazes")
 ```
 
 ## game.set_execution_speed
@@ -665,16 +674,17 @@ game.pet_the_piggy()
 
 ## game.change_hat
 
-`game.change_hat(name: String) -> Nil`
+`game.change_hat(hat: game.Hat) -> Nil`
 
-Changes the hat of the drone to `name` (e.g. `"dinosaur"`).
+Changes the hat of the drone to `hat` (e.g. `game.StrawHat`). Hats are cosmetic
+except for the dinosaur hat, which starts the dinosaur game.
 
 takes `200` ticks to execute.
 
 example:
 
 ```
-game.change_hat("dinosaur")
+game.change_hat(game.DinosaurHat)
 ```
 
 ## game.quick_print
@@ -1187,4 +1197,798 @@ example:
 
 ```
 let _ = item.use_item(item.Fertilizer)
+```
+
+## game.StrawHat
+
+`game.StrawHat : game.Hat`
+
+The default hat.
+
+example:
+
+```
+game.change_hat(game.StrawHat)
+```
+
+## game.DinosaurHat
+
+`game.DinosaurHat : game.Hat`
+
+Equip it to start the dinosaur game.
+
+example:
+
+```
+game.change_hat(game.DinosaurHat)
+```
+
+## game.GreenHat
+
+`game.GreenHat : game.Hat`
+
+A green hat.
+
+example:
+
+```
+game.change_hat(game.GreenHat)
+```
+
+## game.GrayHat
+
+`game.GrayHat : game.Hat`
+
+A gray hat.
+
+example:
+
+```
+game.change_hat(game.GrayHat)
+```
+
+## game.PurpleHat
+
+`game.PurpleHat : game.Hat`
+
+A purple hat.
+
+example:
+
+```
+game.change_hat(game.PurpleHat)
+```
+
+## game.BrownHat
+
+`game.BrownHat : game.Hat`
+
+A brown hat.
+
+example:
+
+```
+game.change_hat(game.BrownHat)
+```
+
+## game.WizardHat
+
+`game.WizardHat : game.Hat`
+
+A magical wizard hat. Unlocking it must have taken some programming magic!
+
+example:
+
+```
+game.change_hat(game.WizardHat)
+```
+
+## game.TopHat
+
+`game.TopHat : game.Hat`
+
+It looks expensive and distinguished.
+
+example:
+
+```
+game.change_hat(game.TopHat)
+```
+
+## game.TrafficCone
+
+`game.TrafficCone : game.Hat`
+
+Safety first!
+
+example:
+
+```
+game.change_hat(game.TrafficCone)
+```
+
+## game.TrafficConeStack
+
+`game.TrafficConeStack : game.Hat`
+
+A stack of traffic cones as a hat. Safety first, several times over.
+
+example:
+
+```
+game.change_hat(game.TrafficConeStack)
+```
+
+## game.PumpkinHat
+
+`game.PumpkinHat : game.Hat`
+
+A pumpkin for your head. Perfect for Halloween.
+
+example:
+
+```
+game.change_hat(game.PumpkinHat)
+```
+
+## game.CarrotHat
+
+`game.CarrotHat : game.Hat`
+
+Who wouldn't want carrots on their head?
+
+example:
+
+```
+game.change_hat(game.CarrotHat)
+```
+
+## game.CactusHat
+
+`game.CactusHat : game.Hat`
+
+A bit spiky.
+
+example:
+
+```
+game.change_hat(game.CactusHat)
+```
+
+## game.SunflowerHat
+
+`game.SunflowerHat : game.Hat`
+
+Bright and cheerful.
+
+example:
+
+```
+game.change_hat(game.SunflowerHat)
+```
+
+## game.GoldHat
+
+`game.GoldHat : game.Hat`
+
+Show off your wealth with this golden hat.
+
+example:
+
+```
+game.change_hat(game.GoldHat)
+```
+
+## game.GoldenGoldHat
+
+`game.GoldenGoldHat : game.Hat`
+
+It's even more golden than the normal gold hat.
+
+example:
+
+```
+game.change_hat(game.GoldenGoldHat)
+```
+
+## game.TreeHat
+
+`game.TreeHat : game.Hat`
+
+A hat shaped like a tree. How nice!
+
+example:
+
+```
+game.change_hat(game.TreeHat)
+```
+
+## game.GoldTrophyHat
+
+`game.GoldTrophyHat : game.Hat`
+
+A golden trophy hat. Only for the best farmer.
+
+example:
+
+```
+game.change_hat(game.GoldTrophyHat)
+```
+
+## game.SilverTrophyHat
+
+`game.SilverTrophyHat : game.Hat`
+
+A silver trophy hat. For the second best farmer.
+
+example:
+
+```
+game.change_hat(game.SilverTrophyHat)
+```
+
+## game.WoodTrophyHat
+
+`game.WoodTrophyHat : game.Hat`
+
+A wooden trophy hat. For the third best farmer.
+
+example:
+
+```
+game.change_hat(game.WoodTrophyHat)
+```
+
+## game.GoldenCactusHat
+
+`game.GoldenCactusHat : game.Hat`
+
+A golden hat shaped like a cactus.
+
+example:
+
+```
+game.change_hat(game.GoldenCactusHat)
+```
+
+## game.GoldenCarrotHat
+
+`game.GoldenCarrotHat : game.Hat`
+
+A golden hat shaped like a carrot.
+
+example:
+
+```
+game.change_hat(game.GoldenCarrotHat)
+```
+
+## game.GoldenPumpkinHat
+
+`game.GoldenPumpkinHat : game.Hat`
+
+A golden hat shaped like a pumpkin.
+
+example:
+
+```
+game.change_hat(game.GoldenPumpkinHat)
+```
+
+## game.GoldenSunflowerHat
+
+`game.GoldenSunflowerHat : game.Hat`
+
+A golden hat shaped like a sunflower.
+
+example:
+
+```
+game.change_hat(game.GoldenSunflowerHat)
+```
+
+## game.GoldenTreeHat
+
+`game.GoldenTreeHat : game.Hat`
+
+A golden hat shaped like a tree.
+
+example:
+
+```
+game.change_hat(game.GoldenTreeHat)
+```
+
+## game.TheFarmersRemains
+
+`game.TheFarmersRemains : game.Hat`
+
+The remains of a farmer.
+
+example:
+
+```
+game.change_hat(game.TheFarmersRemains)
+```
+
+## game.unlock.AutoUnlock
+
+`game.unlock.AutoUnlock : game.unlock.Unlock`
+
+Automatically unlock things.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.AutoUnlock)
+```
+
+## game.unlock.Cactus
+
+`game.unlock.Cactus : game.unlock.Unlock`
+
+Unlocks cactus. Upgrades increase the yield and cost of cactus.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Cactus)
+```
+
+## game.unlock.Carrots
+
+`game.unlock.Carrots : game.unlock.Unlock`
+
+Unlocks tilling the soil and planting carrots. Upgrades increase the yield and
+cost of carrots.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Carrots)
+```
+
+## game.unlock.Costs
+
+`game.unlock.Costs : game.unlock.Unlock`
+
+Allows access to the cost of things.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Costs)
+```
+
+## game.unlock.Debug
+
+`game.unlock.Debug : game.unlock.Unlock`
+
+Tools to help with debugging programs.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Debug)
+```
+
+## game.unlock.Debug2
+
+`game.unlock.Debug2 : game.unlock.Unlock`
+
+Functions to temporarily slow down the execution and make the grid smaller.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Debug2)
+```
+
+## game.unlock.Dictionaries
+
+`game.unlock.Dictionaries : game.unlock.Unlock`
+
+Get access to dictionaries and sets.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Dictionaries)
+```
+
+## game.unlock.Dinosaurs
+
+`game.unlock.Dinosaurs : game.unlock.Unlock`
+
+Unlocks majestic ancient creatures. Upgrades increase the yield and cost of
+dinosaurs.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Dinosaurs)
+```
+
+## game.unlock.Expand
+
+`game.unlock.Expand : game.unlock.Unlock`
+
+Unlocks expanding the farm land and unlocks movement. Upgrades expand the farm.
+This also clears the farm.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Expand)
+```
+
+## game.unlock.Fertilizer
+
+`game.unlock.Fertilizer : game.unlock.Unlock`
+
+Reduces the remaining growing time of the plant under the drone by 2 seconds.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Fertilizer)
+```
+
+## game.unlock.Functions
+
+`game.unlock.Functions : game.unlock.Unlock`
+
+Define your own functions.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Functions)
+```
+
+## game.unlock.Grass
+
+`game.unlock.Grass : game.unlock.Unlock`
+
+Increases the yield of grass.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Grass)
+```
+
+## game.unlock.Hats
+
+`game.unlock.Hats : game.unlock.Unlock`
+
+Unlocks new hat colors for your drone.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Hats)
+```
+
+## game.unlock.Import
+
+`game.unlock.Import : game.unlock.Unlock`
+
+Import code from other files.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Import)
+```
+
+## game.unlock.Leaderboard
+
+`game.unlock.Leaderboard : game.unlock.Unlock`
+
+Join the leaderboard for the fastest time in farming a specific crop or for the
+fastest reset of the farm.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Leaderboard)
+```
+
+## game.unlock.Lists
+
+`game.unlock.Lists : game.unlock.Unlock`
+
+Use lists to store lots of values.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Lists)
+```
+
+## game.unlock.Loops
+
+`game.unlock.Loops : game.unlock.Unlock`
+
+Unlocks a simple while loop.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Loops)
+```
+
+## game.unlock.Mazes
+
+`game.unlock.Mazes : game.unlock.Unlock`
+
+Unlocks a maze with a treasure in the middle. Upgrades increase the gold in
+treasure chests.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Mazes)
+```
+
+## game.unlock.Megafarm
+
+`game.unlock.Megafarm : game.unlock.Unlock`
+
+Unlocks multiple drones and drone management functions.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Megafarm)
+```
+
+## game.unlock.Operators
+
+`game.unlock.Operators : game.unlock.Unlock`
+
+Arithmetic, comparison and logic operators.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Operators)
+```
+
+## game.unlock.Plant
+
+`game.unlock.Plant : game.unlock.Unlock`
+
+Unlocks planting.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Plant)
+```
+
+## game.unlock.Polyculture
+
+`game.unlock.Polyculture : game.unlock.Unlock`
+
+Use companion planting to increase the yield.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Polyculture)
+```
+
+## game.unlock.Pumpkins
+
+`game.unlock.Pumpkins : game.unlock.Unlock`
+
+Unlocks pumpkins. Upgrades increase the yield and cost of pumpkins.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Pumpkins)
+```
+
+## game.unlock.Senses
+
+`game.unlock.Senses : game.unlock.Unlock`
+
+The drone can see what's under it and where it is.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Senses)
+```
+
+## game.unlock.Simulation
+
+`game.unlock.Simulation : game.unlock.Unlock`
+
+Unlocks simulation functions for testing and optimization.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Simulation)
+```
+
+## game.unlock.Speed
+
+`game.unlock.Speed : game.unlock.Unlock`
+
+Increases the speed of the drone.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Speed)
+```
+
+## game.unlock.Sunflowers
+
+`game.unlock.Sunflowers : game.unlock.Unlock`
+
+Unlocks sunflowers and power. Upgrades increase the power gained from
+sunflowers.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Sunflowers)
+```
+
+## game.unlock.TheFarmersRemains
+
+`game.unlock.TheFarmersRemains : game.unlock.Unlock`
+
+Unlocks the special hat 'The Farmers Remains'.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.TheFarmersRemains)
+```
+
+## game.unlock.Timing
+
+`game.unlock.Timing : game.unlock.Unlock`
+
+Functions to help measure performance.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Timing)
+```
+
+## game.unlock.TopHat
+
+`game.unlock.TopHat : game.unlock.Unlock`
+
+Unlocks the fancy Top Hat.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.TopHat)
+```
+
+## game.unlock.Trees
+
+`game.unlock.Trees : game.unlock.Unlock`
+
+Unlocks trees. Upgrades increase the yield of bushes and trees.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Trees)
+```
+
+## game.unlock.Utilities
+
+`game.unlock.Utilities : game.unlock.Unlock`
+
+Unlocks the `min()`, `max()` and `abs()` functions.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Utilities)
+```
+
+## game.unlock.Variables
+
+`game.unlock.Variables : game.unlock.Unlock`
+
+Assign values to variables.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Variables)
+```
+
+## game.unlock.Watering
+
+`game.unlock.Watering : game.unlock.Unlock`
+
+Water the plants to make them grow faster.
+
+example:
+
+```
+import game/unlock
+
+let _ = unlock.unlock(unlock.Watering)
 ```

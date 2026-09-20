@@ -5,6 +5,7 @@
 
 import game
 import game/item
+import game/unlock
 import gleam/bool
 import gleam/int
 import gleam/io
@@ -74,8 +75,8 @@ pub fn main() {
     "carrot unlocked: " <> int.to_string(game.num_unlocked(game.Carrot)),
   )
   game.unlock(game.Carrot)
-  game.unlock_by_name("multi_trade")
-  // capabilities use the _by_name escape hatch
+  unlock.unlock(unlock.Megafarm)
+  // the research tree lives in game/unlock
 
   // Items
   water_if_dry()
@@ -89,7 +90,7 @@ pub fn main() {
   game.set_execution_speed(1.0)
   game.do_a_flip()
   game.pet_the_piggy()
-  game.change_hat("sombrero")
+  game.change_hat(game.StrawHat)
   echo "free, unpaced print"
 
   game.clear()

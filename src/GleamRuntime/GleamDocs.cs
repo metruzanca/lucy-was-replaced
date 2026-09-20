@@ -27,9 +27,29 @@ namespace GleamRuntime
             "north", "east", "south", "west",
         };
 
+        private static readonly HashSet<string> HatNames = new(StringComparer.Ordinal)
+        {
+            "strawhat", "dinosaurhat", "greenhat", "grayhat", "purplehat", "brownhat",
+            "wizardhat", "tophat", "trafficcone", "trafficconestack", "pumpkinhat",
+            "carrothat", "cactushat", "sunflowerhat", "goldhat", "goldengoldhat",
+            "treehat", "goldtrophyhat", "silvertrophyhat", "woodtrophyhat",
+            "goldencactushat", "goldencarrothat", "goldenpumpkinhat",
+            "goldensunflowerhat", "goldentreehat", "thefarmersremains",
+        };
+
         private static readonly HashSet<string> ItemNames = new(StringComparer.Ordinal)
         {
             "hay", "wood", "carrot", "pumpkin", "power", "gold", "bones", "water", "fertilizer",
+        };
+
+        private static readonly HashSet<string> UnlockNames = new(StringComparer.Ordinal)
+        {
+            "autounlock", "cactus", "carrots", "costs", "debug", "debug2", "dictionaries",
+            "dinosaurs", "expand", "fertilizer", "functions", "grass", "hats", "import",
+            "leaderboard", "lists", "loops", "mazes", "megafarm", "operators", "plant",
+            "polyculture", "pumpkins", "senses", "simulation", "speed", "sunflowers",
+            "thefarmersremains", "timing", "tophat", "trees", "utilities", "variables",
+            "watering",
         };
 
         /// <summary>Page ids in reference order ("functions/plant", "game", "items/hay", …).</summary>
@@ -98,12 +118,25 @@ namespace GleamRuntime
                         : null;
                 }
 
+                if (word.StartsWith("game.unlock.", StringComparison.Ordinal))
+                {
+                    var unlock = word.Substring("game.unlock.".Length).ToLowerInvariant();
+                    var unlockPage = UnlockNames.Contains(unlock)
+                        ? "unlocks/" + unlock
+                        : "functions/unlock_" + unlock;
+                    return Pages.ContainsKey(unlockPage)
+                        ? (unlockPage, GetValue(Labels, unlockPage, word))
+                        : null;
+                }
+
                 var name = word.Substring("game.".Length).ToLowerInvariant();
                 string page;
                 if (EntityNames.Contains(name) || GroundNames.Contains(name))
                     page = "objects/" + name;
                 else if (DirectionNames.Contains(name))
                     page = "directions/" + name;
+                else if (HatNames.Contains(name))
+                    page = "hats/" + name;
                 else
                     page = "functions/" + name;
                 return Pages.ContainsKey(page)
@@ -238,6 +271,18 @@ namespace GleamRuntime
             return entries;
         }
 
+        /// <summary>Ordered TOC entries for the unlocks section.</summary>
+        public static List<(string Label, string Page, string Gate)> Unlocks()
+        {
+            var entries = new List<(string, string, string)>();
+            foreach (var page in Order)
+            {
+                if (page.StartsWith("unlocks/", StringComparison.Ordinal))
+                    entries.Add((Labels[page], page, GetValue(Gates, page)));
+            }
+            return entries;
+        }
+
         /// <summary>Bare member names for the "game." autocomplete domain.</summary>
         public static List<string> Members()
         {
@@ -245,8 +290,8 @@ namespace GleamRuntime
             foreach (var page in Order)
             {
                 var label = GetValue(Labels, page);
-                if (label.StartsWith("game.item.", StringComparison.Ordinal))
-                    continue;
+                if (label.StartsWith("game.item.", StringComparison.Ordinal)) continue;
+                if (label.StartsWith("game.unlock.", StringComparison.Ordinal)) continue;
                 if (label.StartsWith("game.", StringComparison.Ordinal) && label != "game module")
                     members.Add(label.Substring("game.".Length));
             }
@@ -262,6 +307,19 @@ namespace GleamRuntime
                 var label = GetValue(Labels, page);
                 if (label.StartsWith("game.item.", StringComparison.Ordinal))
                     members.Add(label.Substring("game.item.".Length));
+            }
+            return members;
+        }
+
+        /// <summary>Bare member names for the "game.unlock." autocomplete domain.</summary>
+        public static List<string> UnlockMembers()
+        {
+            var members = new List<string>();
+            foreach (var page in Order)
+            {
+                var label = GetValue(Labels, page);
+                if (label.StartsWith("game.unlock.", StringComparison.Ordinal))
+                    members.Add(label.Substring("game.unlock.".Length));
             }
             return members;
         }
@@ -345,6 +403,16 @@ namespace GleamRuntime
                 page = ItemNames.Contains(name) ? "items/" + name : "functions/" + name;
                 gate = name;
             }
+            else if (title.StartsWith("game.unlock.", StringComparison.Ordinal))
+            {
+                var name = title.Substring("game.unlock.".Length).ToLowerInvariant();
+                // Unlock constants ("game.unlock.Megafarm") are unlocks/* pages;
+                // unlock module functions ("game.unlock.unlock") are functions/*
+                // pages, namespaced so they don't collide with game.unlock /
+                // game.num_unlocked.
+                page = UnlockNames.Contains(name) ? "unlocks/" + name : "functions/unlock_" + name;
+                gate = name;
+            }
             else if (title.StartsWith("game.", StringComparison.Ordinal))
             {
                 var name = title.Substring("game.".Length).ToLowerInvariant();
@@ -356,6 +424,10 @@ namespace GleamRuntime
                 else if (DirectionNames.Contains(name))
                 {
                     page = "directions/" + name;
+                }
+                else if (HatNames.Contains(name))
+                {
+                    page = "hats/" + name;
                 }
                 else
                 {

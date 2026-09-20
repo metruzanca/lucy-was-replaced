@@ -145,6 +145,7 @@ namespace GleamRuntime.Tests
             var compiled = _fixture.Runner.Compile("""
                 import game
                 import game/item as item
+                import game/unlock as unlock
 
                 pub fn main() {
                   game.swap(game.East)
@@ -159,13 +160,13 @@ namespace GleamRuntime.Tests
                   game.max_drones()
                   game.unlock(game.Carrot)
                   game.num_unlocked(game.Carrot)
-                  game.unlock_by_name("multi_trade")
-                  game.num_unlocked_by_name("multi_trade")
+                  unlock.unlock(unlock.Megafarm)
+                  unlock.num_unlocked(unlock.Mazes)
                   game.set_execution_speed(1.0)
                   game.set_world_size(4)
                   game.do_a_flip()
                   game.pet_the_piggy()
-                  game.change_hat("sombrero")
+                  game.change_hat(game.StrawHat)
                   game.quick_print("hi")
                   item.use_items(item.Water, 3)
                   item.unlock_item(item.Hay)
@@ -191,13 +192,13 @@ namespace GleamRuntime.Tests
             Assert.Contains("max_drones()", bridge.Calls);
             Assert.Contains("unlock(carrot)", bridge.Calls);
             Assert.Contains("num_unlocked(carrot)", bridge.Calls);
-            Assert.Contains("unlock(multi_trade)", bridge.Calls);
-            Assert.Contains("num_unlocked(multi_trade)", bridge.Calls);
+            Assert.Contains("unlock(megafarm)", bridge.Calls);
+            Assert.Contains("num_unlocked(mazes)", bridge.Calls);
             Assert.Contains("set_execution_speed(1)", bridge.Calls);
             Assert.Contains("set_world_size(4)", bridge.Calls);
             Assert.Contains("do_a_flip()", bridge.Calls);
             Assert.Contains("pet_the_piggy()", bridge.Calls);
-            Assert.Contains("change_hat(sombrero)", bridge.Calls);
+            Assert.Contains("change_hat(straw_hat)", bridge.Calls);
             Assert.Contains("quick_print(hi)", bridge.Calls);
             Assert.Contains("use_item(8, 3)", bridge.Calls);   // Water x3
             Assert.Contains("unlock(hay)", bridge.Calls);

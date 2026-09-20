@@ -92,6 +92,7 @@ namespace GleamFarmer
                 // embedded copy the runtime compiles from — always refresh the LSP stubs.
                 CopyAlways(Path.Combine(_embeddedDir, "game.gleam"), Path.Combine(srcDir, "game.gleam"));
                 CopyAlways(Path.Combine(_embeddedDir, "game", "item.gleam"), Path.Combine(srcDir, "game", "item.gleam"));
+                CopyAlways(Path.Combine(_embeddedDir, "game", "unlock.gleam"), Path.Combine(srcDir, "game", "unlock.gleam"));
                 CopyAlways(Path.Combine(_embeddedDir, "game_ffi.mjs"), Path.Combine(srcDir, "game_ffi.mjs"));
 
                 if (_projectDir != projectDir)

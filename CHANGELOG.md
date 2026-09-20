@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Change your drone's hat with named constants instead of strings: `game.change_hat(game.StrawHat)` — and 25 more hats to pick from, from the humble traffic cone to the golden trophies.
+- Unlock things in the research tree with named constants too: `import game/unlock` and `unlock.unlock(unlock.Megafarm)` — all 34 unlocks (crops, speed, the megafarm, even 'The Farmers Remains') are now typed, no more guessing strings like `"multi_trade"`.
+
 ## 0.3.1
 
 - A clear disclosure that this mod is built with heavy help from AI coding

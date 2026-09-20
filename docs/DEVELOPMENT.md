@@ -61,7 +61,7 @@ game.clear()                      // wipe the farm
 game.measure()                    // petal count / cactus size / treasure position
 game.get_cost(game.Carrot)        // seed cost as items
 game.unlock(game.Carrot)          // spend resources to unlock an entity
-game.unlock_by_name("multi_trade")
+unlock.unlock(unlock.Megafarm)    // spend resources on the research tree (import game/unlock)
 game.set_world_size(4)
 game.do_a_flip()
 ```
@@ -97,17 +97,18 @@ world (actions serialize on the main thread). `game.send(message, drone_id)` /
 
 Custom types: `game.Direction`, `game.Entity`, `game.Ground`, `game.Position`,
 `game.Measure` (from `measure`/`measure_at`), `game.Companion` (from `get_companion`),
-`game.item.Item`, `game.DroneHandle`.
+`game.item.Item`, `game.unlock.Unlock`, `game.DroneHandle`.
 
 Full `game` surface — actions (paced): `move`, `can_move`, `harvest`, `can_harvest`,
-`plant`, `till`, `swap`, `clear`, `unlock`, `unlock_by_name`, `set_execution_speed`,
+`plant`, `till`, `swap`, `clear`, `unlock`, `set_execution_speed`,
 `set_world_size`, `do_a_flip`, `pet_the_piggy`, `change_hat`, `quick_print` (free).
 Logging: `io.println` (paced, like `print`) and `echo value` (free, like
 `quick_print`). Sensors (instant): `get_pos`, `get_world_size`, `get_entity_type`,
 `get_ground_type`, `get_water`, `measure`, `measure_at`, `get_companion`, `get_cost`,
-`random`, `num_unlocked`, `num_unlocked_by_name`, `num_drones`, `max_drones`,
+`random`, `num_unlocked`, `num_drones`, `max_drones`,
 `get_time`, `get_tick_count`. Items (`import game/item`): `item.num_items`,
 `item.use_item`, `item.use_items`, `item.unlock_item`, `item.num_unlocked_item`.
+Research tree (`import game/unlock`): `unlock.unlock`, `unlock.num_unlocked`.
 Drones: `spawn_drone`, `spawn_drone_with`, `get_drone_id`, `wait_for`, `has_finished`,
 `send`, `receive`, `receive_from`.
 

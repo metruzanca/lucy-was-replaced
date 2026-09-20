@@ -77,6 +77,14 @@ namespace GleamFarmer.Patches
             __result = Toc(GleamDocs.Items(), includeOverview: false);
         }
 
+        [HarmonyPatch(nameof(MarkdownText.GenerateUnlockTOC))]
+        [HarmonyPostfix]
+        public static void Unlocks(ref string __result)
+        {
+            if (!Enabled()) return;
+            __result = Toc(GleamDocs.Unlocks(), includeOverview: false);
+        }
+
         private static bool Enabled() =>
             GleamHost.Instance != null && GleamHost.Instance.Enabled && GleamDocs.IsLoaded;
 

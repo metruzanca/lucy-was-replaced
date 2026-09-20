@@ -30,6 +30,8 @@ namespace GleamFarmer.Patches
                 foreach (var module in GleamStdlibDocs.CuratedModules)
                     if (!__result.Contains(module))
                         __result.Add(module);
+                if (!__result.Contains("unlock"))
+                    __result.Add("unlock");
                 __result.Sort();
             }
 
@@ -49,6 +51,12 @@ namespace GleamFarmer.Patches
                 if (domain == "item" && !HasUserModule("item"))
                 {
                     __result = GleamDocs.ItemMembers();
+                    return false;
+                }
+
+                if (domain == "unlock" && !HasUserModule("unlock"))
+                {
+                    __result = GleamDocs.UnlockMembers();
                     return false;
                 }
 

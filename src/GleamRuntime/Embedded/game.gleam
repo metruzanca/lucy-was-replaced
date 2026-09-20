@@ -29,6 +29,35 @@ pub type Entity {
   Hedge
 }
 
+pub type Hat {
+  StrawHat
+  DinosaurHat
+  GreenHat
+  GrayHat
+  PurpleHat
+  BrownHat
+  WizardHat
+  TopHat
+  TrafficCone
+  TrafficConeStack
+  PumpkinHat
+  CarrotHat
+  CactusHat
+  SunflowerHat
+  GoldHat
+  GoldenGoldHat
+  TreeHat
+  GoldTrophyHat
+  SilverTrophyHat
+  WoodTrophyHat
+  GoldenCactusHat
+  GoldenCarrotHat
+  GoldenPumpkinHat
+  GoldenSunflowerHat
+  GoldenTreeHat
+  TheFarmersRemains
+}
+
 pub type Ground {
   Soil
   Grassland
@@ -284,22 +313,12 @@ pub fn unlock(entity: Entity) -> Bool {
   unlock_code(entity_name(entity))
 }
 
-/// Spend resources to unlock anything by its unlock name (e.g. "multi_trade").
-pub fn unlock_by_name(name: String) -> Bool {
-  unlock_code(name)
-}
-
 @external(javascript, "./game_ffi.mjs", "num_unlocked_code")
 fn num_unlocked_code(name: String) -> Int
 
 /// How many times an entity's unlock has been bought (0 = not unlocked).
 pub fn num_unlocked(entity: Entity) -> Int {
   num_unlocked_code(entity_name(entity))
-}
-
-/// How many times an unlock name has been bought (0 = not unlocked).
-pub fn num_unlocked_by_name(name: String) -> Int {
-  num_unlocked_code(name)
 }
 
 @external(javascript, "./game_ffi.mjs", "set_execution_speed")
@@ -314,8 +333,43 @@ pub fn do_a_flip() -> Nil
 @external(javascript, "./game_ffi.mjs", "pet_the_piggy")
 pub fn pet_the_piggy() -> Nil
 
+fn hat_name(hat: Hat) -> String {
+  case hat {
+    StrawHat -> "straw_hat"
+    DinosaurHat -> "dinosaur_hat"
+    GreenHat -> "green_hat"
+    GrayHat -> "gray_hat"
+    PurpleHat -> "purple_hat"
+    BrownHat -> "brown_hat"
+    WizardHat -> "wizard_hat"
+    TopHat -> "top_hat"
+    TrafficCone -> "traffic_cone"
+    TrafficConeStack -> "traffic_cone_stack"
+    PumpkinHat -> "pumpkin_hat"
+    CarrotHat -> "carrot_hat"
+    CactusHat -> "cactus_hat"
+    SunflowerHat -> "sunflower_hat"
+    GoldHat -> "gold_hat"
+    GoldenGoldHat -> "golden_gold_hat"
+    TreeHat -> "tree_hat"
+    GoldTrophyHat -> "gold_trophy_hat"
+    SilverTrophyHat -> "silver_trophy_hat"
+    WoodTrophyHat -> "wood_trophy_hat"
+    GoldenCactusHat -> "golden_cactus_hat"
+    GoldenCarrotHat -> "golden_carrot_hat"
+    GoldenPumpkinHat -> "golden_pumpkin_hat"
+    GoldenSunflowerHat -> "golden_sunflower_hat"
+    GoldenTreeHat -> "golden_tree_hat"
+    TheFarmersRemains -> "the_farmers_remains"
+  }
+}
+
 @external(javascript, "./game_ffi.mjs", "change_hat")
-pub fn change_hat(name: String) -> Nil
+fn change_hat_code(name: String) -> Nil
+
+pub fn change_hat(hat: Hat) -> Nil {
+  change_hat_code(hat_name(hat))
+}
 
 /// Print without pacing (free, no op cost) — unlike `io.println`.
 @external(javascript, "./game_ffi.mjs", "quick_print")
