@@ -147,6 +147,7 @@ namespace GleamFarmer
                 }
 
                 InstallGleamTheme(embedded);
+                InstallGleamFirstProgramDoc(embedded, enabled.Value);
 
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);
@@ -186,6 +187,36 @@ namespace GleamFarmer
             catch (Exception ex)
             {
                 Log.LogWarning($"GleamFarmer: failed to install the Gleam editor theme: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Rewrite the base game's "First Program" docs page (docs/first_program.md, English)
+        /// with the bundled Gleam version, so the info panel's starting tutorial matches what
+        /// the player actually writes. English only for now; other languages keep the game's
+        /// Python page. Runs on the Unity main thread from Plugin.Awake.
+        /// </summary>
+        private static void InstallGleamFirstProgramDoc(string embedded, bool gleamMode)
+        {
+            if (!gleamMode) return;
+            try
+            {
+                var source = Path.Combine(embedded, "docs", "first_program.md");
+                if (!File.Exists(source))
+                {
+                    Log.LogWarning($"GleamFarmer: missing bundled first-program doc: {source}");
+                    return;
+                }
+
+                var dest = Path.Combine(
+                    UnityEngine.Application.streamingAssetsPath,
+                    "Languages", "EN", "docs", "first_program.md");
+                File.Copy(source, dest, overwrite: true);
+                Log.LogInfo("GleamFarmer: rewrote the in-game 'First Program' docs page.");
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"GleamFarmer: could not rewrite the 'First Program' docs page: {ex.Message}");
             }
         }
 
