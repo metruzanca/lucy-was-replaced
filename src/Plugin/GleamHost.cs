@@ -147,7 +147,7 @@ namespace GleamFarmer
                 }
 
                 InstallGleamTheme(embedded);
-                InstallGleamFirstProgramDoc(embedded, enabled.Value);
+                InstallGleamDocs(embedded, enabled.Value);
 
                 var runner = new GleamRunner(wasmBytes, stdlib, runtimeFiles, extraModules);
                 Instance = new GleamHost(runner, enabled);
@@ -191,33 +191,51 @@ namespace GleamFarmer
         }
 
         /// <summary>
-        /// Rewrite the base game's "First Program" docs page (docs/first_program.md, English)
-        /// with the bundled Gleam version, so the info panel's starting tutorial matches what
-        /// the player actually writes. English only for now; other languages keep the game's
-        /// Python page. Runs on the Unity main thread from Plugin.Awake.
+        /// Rewrite the base game's Python-flavoured docs pages with the bundled Gleam
+        /// versions: <c>docs/first_program.md</c>, <c>docs/unlocks/*</c> and
+        /// <c>docs/scripting/*</c> (English only for now; other languages keep the game's
+        /// Python pages). These are the pages the info panel and the on-unlock popups serve.
+        /// Runs on the Unity main thread from Plugin.Awake.
         /// </summary>
-        private static void InstallGleamFirstProgramDoc(string embedded, bool gleamMode)
+        private static void InstallGleamDocs(string embedded, bool gleamMode)
         {
             if (!gleamMode) return;
             try
             {
-                var source = Path.Combine(embedded, "docs", "first_program.md");
-                if (!File.Exists(source))
+                var docsSrc = Path.Combine(embedded, "docs");
+                var docsDest = Path.Combine(
+                    UnityEngine.Application.streamingAssetsPath, "Languages", "EN", "docs");
+                var copied = 0;
+
+                void CopyTo(string relative)
                 {
-                    Log.LogWarning($"GleamFarmer: missing bundled first-program doc: {source}");
-                    return;
+                    var src = Path.Combine(docsSrc, relative);
+                    if (!File.Exists(src)) return;
+                    var dest = Path.Combine(docsDest, relative);
+                    Directory.CreateDirectory(Path.GetDirectoryName(dest) ?? docsDest);
+                    File.Copy(src, dest, overwrite: true);
+                    copied++;
                 }
 
-                var dest = Path.Combine(
-                    UnityEngine.Application.streamingAssetsPath,
-                    "Languages", "EN", "docs", "first_program.md");
-                File.Copy(source, dest, overwrite: true);
-                Log.LogInfo("GleamFarmer: rewrote the in-game 'First Program' docs page.");
+                CopyTo("first_program.md");
+                foreach (var file in EnumerateDocs(docsSrc, "unlocks")) CopyTo("unlocks/" + file);
+                foreach (var file in EnumerateDocs(docsSrc, "scripting")) CopyTo("scripting/" + file);
+
+                if (copied > 0)
+                    Log.LogInfo($"GleamFarmer: rewrote {copied} in-game docs pages to Gleam.");
             }
             catch (Exception ex)
             {
-                Log.LogWarning($"GleamFarmer: could not rewrite the 'First Program' docs page: {ex.Message}");
+                Log.LogWarning($"GleamFarmer: could not rewrite the in-game docs pages: {ex.Message}");
             }
+        }
+
+        private static IEnumerable<string> EnumerateDocs(string docsSrc, string sub)
+        {
+            var dir = Path.Combine(docsSrc, sub);
+            return Directory.Exists(dir)
+                ? Directory.EnumerateFiles(dir, "*.md").Select(Path.GetFileName)
+                : Enumerable.Empty<string>();
         }
 
         /// <summary>Run/stop the code in the given window. Returns true if handled.</summary>

@@ -76,7 +76,7 @@ The game's Python has builtins that Gleam does not. Use the Gleam stdlib
 (`gleam/list`, `gleam/string`, `gleam/set`, `gleam/dict`, `gleam/int`,
 `gleam/float`) instead:
 
-- `range(n)` → `gleam/list.range(0, n)`
+- `range(n)` → repeat a block `n` times with `use _ <- list.each(list.repeat(True, n))`
 - `len(x)` → `gleam/list.length(x)` (or `gleam/string.length`)
 - `min` / `max` → fold over a list with `gleam/int.min` / `gleam/int.max`
 - `abs(n)` → `gleam/int.abs` / `gleam/float.abs`
