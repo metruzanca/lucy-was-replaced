@@ -1,11 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - Change your drone's hat with named constants instead of strings: `game.change_hat(game.StrawHat)` — and 25 more hats to pick from, from the humble traffic cone to the golden trophies.
 - Unlock things in the research tree with named constants too: `import game/unlock` and `unlock.unlock(unlock.Megafarm)` — all 34 unlocks (crops, speed, the megafarm, even 'The Farmers Remains') are now typed, no more guessing strings like `"multi_trade"`.
 - The in-game "First Program" page now teaches the Gleam way to start, beginning with the `import game` / `pub fn main()` skeleton instead of the old Python commands.
 - Every in-game docs page is now Gleam: the unlock pages, the research-tree tutorials, and the language lessons all use `game.` calls instead of Python, plant and unlock costs are shown again on their pages, and the Import page explains how to `import game`, `import game/item`, and selectively import names like `Position` that are both a type and a record constructor.
+- Fixed a bug where a run right after saving in an external editor could still run the old code — the game now always picks up the newest version from your editor.
 
 ## 0.3.1
 
