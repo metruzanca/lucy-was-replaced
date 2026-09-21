@@ -402,11 +402,21 @@ namespace GleamFarmer
         {
             var oldName = FileNameToModule(e.OldName);
             var newName = FileNameToModule(e.Name);
-            if (oldName == null || newName == null) return;
+            if (newName == null) return;
             lock (_lock)
             {
                 if (_flushing) return;
-                _renames.Add((oldName, newName));
+                if (oldName == null || oldName == newName)
+                {
+                    // Editor atomic-save: a temp file (not a *.gleam module) was renamed over
+                    // the target, so there is no old module to rename. Treat the arrival of
+                    // the .gleam name as a content upsert.
+                    _changed[newName] = ChangeKind.Upsert;
+                }
+                else
+                {
+                    _renames.Add((oldName, newName));
+                }
             }
         }
 

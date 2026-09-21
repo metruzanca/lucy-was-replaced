@@ -270,6 +270,11 @@ namespace GleamFarmer
                 return true;
             }
 
+            // External-editor mode: apply any pending on-disk edits to the windows before
+            // we read them, so a Run right after an external save compiles the latest code
+            // and FlushWindows below can't overwrite the fresh file with stale window text.
+            ProjectSync?.Pump();
+
             try
             {
                 var source = GetCodeText(window);
@@ -343,7 +348,13 @@ namespace GleamFarmer
                 var projectDir = ProjectSync?.ProjectDir;
                 if (projectDir == null)
                     throw new InvalidOperationException("Gleam project not scaffolded.");
-                var compiled = _runner.CompileFromProject(projectDir, entryName, source);
+                // The on-disk project is the source of truth (windows were just flushed
+                // into it on the main thread). Read the entry from disk too so we never
+                // compile a stale window snapshot; fall back to the window text only when
+                // the entry window's name isn't a flushable module (e.g. "main" fallback).
+                var entryOnDisk = File.Exists(GleamProjectSource.ModuleFile(projectDir, entryName));
+                var compiled = _runner.CompileFromProject(
+                    projectDir, entryName, entryOnDisk ? null : source);
                 _dispatcher.Invoke(() =>
                 {
                     var sink = new PluginSink(Log);
