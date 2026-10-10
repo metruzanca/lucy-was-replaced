@@ -10,6 +10,10 @@ Install Lucy was Replaced without a mod manager. You'll need a download of the
    build, not x86). Extract it **into the game folder** so that `winhttp.dll`
    and the `BepInEx/` folder sit right next to `TheFarmerWasReplaced.exe`.
 
+> [!NOTE]
+> MacOS Silcon users must install the x64 build of [BepInEx 5.4.23._**4**_](https://github.com/BepInEx/BepInEx/releases#release-v5.4.23.4) and not .5!
+> As otherwise it will not load the BepInEx at all and quietly fails to initialise!
+
 2. **Install the mod.**
 
    Extract `GleamFarmer-<version>.zip` into the game folder and merge the
@@ -62,3 +66,40 @@ Install Lucy was Replaced without a mod manager. You'll need a download of the
 
 3. Extract the `GleamFarmer-<version>.zip` into the game folder.
 4. Launch and press **Run** as in step 4 above.
+
+## MacOS
+
+> [!NOTE]
+> For both MacOS Silicon and Intel users, the same steps apply, use the x86 builds!
+
+1. Install the BepInEx 5 x64 build into the game folder, as in step 1 above.
+2. Ensure that the .sh in executable
+
+```zsh
+chmod oug+x run_bepinex.sh
+```
+
+3. Edit the .sh file to point to the game executable, for example:
+
+```bash
+...
+executable_name="TheFarmerWasReplaced.app"
+...
+```
+
+4. Add the following to the Steam launch options for the game (change the $USER or game path accordingly):
+
+```
+"/Users/$USER/Library/Application Support/Steam/steamapps/common/The Farmer Was Replaced/run_bepinex.sh" %command%
+```
+
+5. Extract the `GleamFarmer-<version>.zip` into the game folder.
+
+6. Install the wasm dynamic linking library for MacOS, which are not packaged with this mod yet,
+   with the following [wasmtime-v49.0.2](https://github.com/bytecodealliance/wasmtime/releases#release-v49.0.2)
+   of the `wasmtime-v49.0.2-x86_64-macos-c-api.tar.xz ` and extract it to the game folder.
+
+7. Extract the contents of extracted `lib/` onto the `BepInEx/plugins/GleamFarmer/` folder,
+   so that the `libwasmtime.dylib` is in the same folder as other DLLs.
+
+8. Launch the game and press **Run** as in step 4 above.
